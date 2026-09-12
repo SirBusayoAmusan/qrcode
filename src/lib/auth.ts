@@ -1,10 +1,16 @@
 import { supabase } from './supabase'
 
 export async function signUp(email: string, password: string, fullName?: string) {
+  // Determine site redirect URL: prioritize production domain qr.clearpath.click or active host
+  const redirectOrigin = window.location.origin.includes('localhost') 
+    ? window.location.origin 
+    : 'https://qr.clearpath.click';
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: `${redirectOrigin}/dashboard`,
       data: {
         full_name: fullName || email.split('@')[0],
       }
@@ -32,10 +38,14 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signInWithGoogle() {
+  const redirectOrigin = window.location.origin.includes('localhost') 
+    ? window.location.origin 
+    : 'https://qr.clearpath.click';
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      redirectTo: `${redirectOrigin}/dashboard`
     }
   })
 

@@ -34,11 +34,11 @@ export const PublicTapframePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
-  // 1. Try to find page from memory
+  // 1. Check local state first (if testing in creator browser)
   const localPage = pages.find(p => p.slug === slug || p.id === slug);
   const localChannel = channels.find(c => c.id === localPage?.channel_id);
 
-  // 2. If not found in memory (e.g. viewer is scanning on external mobile device), fetch from Supabase
+  // 2. Fetch from Supabase public.pages (or fallback workflows)
   useEffect(() => {
     let isMounted = true;
 
@@ -52,13 +52,64 @@ export const PublicTapframePage: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase
+        // A. Primary query: Query public.pages table (Accessible by any anonymous mobile scanner)
+        const { data: pageRow, error: pageErr } = await supabase
+          .from('pages')
+          .select('*')
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (pageRow && isMounted) {
+          const loadedPage: TapframePage = {
+            id: pageRow.id,
+            channel_id: pageRow.channel_id || 'ch-1',
+            user_id: pageRow.user_id || 'user',
+            title: pageRow.title || 'Creator Offer',
+            slug: pageRow.slug,
+            campaign_name: pageRow.campaign_name || 'Campaign',
+            destination_type: 'landing_page',
+            status: 'active',
+            badge_text: pageRow.badge_text || '',
+            headline: pageRow.headline || pageRow.title,
+            subheadline: pageRow.subheadline || '',
+            product_links: pageRow.product_links || [],
+            lead_capture_enabled: pageRow.lead_capture_enabled !== false,
+            lead_capture_fields: pageRow.lead_capture_fields || { collect_email: true, collect_name: false, collect_phone: false },
+            lead_magnet_title: pageRow.lead_magnet_title || 'Free Strategy Guide & Template',
+            lead_capture_button_text: pageRow.lead_capture_button_text || 'Get Access',
+            total_scans: (pageRow.total_scans || 0) + 1,
+            unique_visitors: (pageRow.total_scans || 0) + 1,
+            total_leads: pageRow.total_leads || 0,
+            total_clicks: pageRow.total_clicks || 0,
+            created_at: pageRow.created_at || new Date().toISOString(),
+            updated_at: pageRow.updated_at || new Date().toISOString(),
+          };
+
+          setRemotePage(loadedPage);
+          if (pageRow.channel_data) {
+            setRemoteChannel(pageRow.channel_data);
+          }
+          setLoadingPage(false);
+          recordScan(loadedPage.id);
+
+          // Update scan counter in Supabase
+          try {
+            await supabase
+              .from('pages')
+              .update({ total_scans: (pageRow.total_scans || 0) + 1 })
+              .eq('id', pageRow.id);
+          } catch (e) {}
+          return;
+        }
+
+        // B. Fallback query: workflows table
+        const { data: wfData, error: wfErr } = await supabase
           .from('workflows')
           .select('data')
           .limit(50);
 
-        if (!error && data && data.length > 0) {
-          for (const row of data) {
+        if (!wfErr && wfData && wfData.length > 0) {
+          for (const row of wfData) {
             const workflowData = row.data as { pages?: TapframePage[]; channels?: Channel[] };
             const found = workflowData.pages?.find(p => p.slug === slug || p.id === slug);
             if (found && isMounted) {
@@ -158,6 +209,7 @@ export const PublicTapframePage: React.FC = () => {
             channel_id: channel.id,
             email: email.trim(),
             name: name.trim() || null,
+            phone: phone.trim() || null,
             source: 'Mobile QR Scan',
             referrer: 'TV Screen',
             device: 'mobile',
@@ -176,7 +228,7 @@ export const PublicTapframePage: React.FC = () => {
 
       setSubmitted(true);
 
-      // Once the person clicks on button, it then redirects to the product link for the user
+      // Redirect to product link if configured
       if (primaryDestinationUrl) {
         setRedirecting(true);
         setTimeout(() => {

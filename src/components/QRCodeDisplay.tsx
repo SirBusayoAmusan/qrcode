@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
-import { Download, Copy, Check, ExternalLink } from 'lucide-react';
+import { Download, Copy, Check, ExternalLink, Share2 } from 'lucide-react';
 import type { TapframePage } from '../types';
 
 interface QRCodeDisplayProps {
@@ -21,7 +21,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Construct target URL
-  const publicUrl = `${window.location.origin}/q/${page.slug}`;
+  const publicUrl = `https://qr.clearpath.click/q/${page.slug}`;
 
   const qrConfig = page.custom_theme?.qr_style || {
     fg_color: '#000000',
@@ -30,13 +30,24 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     callout_text: page.headline || 'Scan to view offer',
   };
 
+  // Generate clean, descriptive, and distinct filename
+  const getCleanFilename = (ext: 'png' | 'svg') => {
+    const rawName = page.headline || page.title || 'Tapframe';
+    const cleanTitle = rawName
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .substring(0, 35);
+    return `ClearpathQR_${cleanTitle}_${page.slug}.${ext}`;
+  };
+
   const copyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const downloadPNG = () => {
+  const downloadPNG = async () => {
     const canvas = document.createElement('canvas');
     const exportWidth = 1080;
     const exportHeight = 1080;
@@ -50,7 +61,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
 
     const img = new Image();
     img.src = hiddenCanvas.toDataURL('image/png');
-    img.onload = () => {
+    img.onload = async () => {
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
       ctx.roundRect(100, 100, 880, 880, 48);
@@ -58,10 +69,39 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
 
       ctx.drawImage(img, 190, 190, 700, 700);
 
-      const a = document.createElement('a');
-      a.download = `ClearpathQR-${page.slug}-4k.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
+      const filename = getCleanFilename('png');
+
+      // Native mobile Web Share API for saving to camera roll / files
+      if (navigator.canShare && canvas.toBlob) {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const file = new File([blob], filename, { type: 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+              try {
+                await navigator.share({
+                  files: [file],
+                  title: page.headline || page.title,
+                  text: `ClearpathQR code for ${page.headline || page.title}`,
+                });
+                return;
+              } catch (err) {
+                // User cancelled or fallback to download
+              }
+            }
+          }
+
+          // Fallback direct download
+          const a = document.createElement('a');
+          a.download = filename;
+          a.href = canvas.toDataURL('image/png');
+          a.click();
+        }, 'image/png');
+      } else {
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      }
     };
   };
 
@@ -72,7 +112,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.download = `ClearpathQR-${page.slug}.svg`;
+    a.download = getCleanFilename('svg');
     a.href = url;
     a.click();
     URL.revokeObjectURL(url);

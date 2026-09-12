@@ -99,15 +99,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser(session?.user ?? null);
         if (session?.user) {
           await syncWithSupabase(session.user.id);
-        } else {
-          // Reset on sign out if needed
         }
       }
     });
 
+    // Setup Postgres Realtime Channels for live synchronization
+    const realtimeChannel = supabase
+      .channel('clearpath-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'workflows' },
+        (payload: any) => {
+          if (!mounted) return;
+          const newWorkflow = payload.new;
+          if (newWorkflow && newWorkflow.data) {
+            const data = newWorkflow.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
+            if (data.channels) setChannels(data.channels);
+            if (data.pages) setPages(data.pages);
+            if (data.leads) setLeads(data.leads);
+            if (data.plan) setUserPlan(data.plan);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'leads' },
+        (payload: any) => {
+          if (!mounted) return;
+          const newLead = payload.new as Lead;
+          if (newLead && newLead.email) {
+            setLeads(prev => {
+              if (prev.some(l => l.id === newLead.id)) return prev;
+              return [newLead, ...prev];
+            });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      supabase.removeChannel(realtimeChannel);
     };
   }, []);
 
@@ -132,22 +165,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const persistToRemote = async (newChannels: Channel[], newPages: TapframePage[], newLeads: Lead[], plan: 'free' | 'pro' = userPlan) => {
-    if (!user) return;
     try {
-      await supabase
-        .from('workflows')
-        .upsert(
-          {
-            user_id: user.id,
-            title: 'ClearpathQR User Workflow',
-            current_step: 4,
-            data: { channels: newChannels, pages: newPages, leads: newLeads, plan },
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id' }
-        );
+      // 1. If signed in, update workflow
+      if (user) {
+        await supabase
+          .from('workflows')
+          .upsert(
+            {
+              user_id: user.id,
+              title: 'ClearpathQR User Workflow',
+              current_step: 4,
+              data: { channels: newChannels, pages: newPages, leads: newLeads, plan },
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' }
+          );
+      }
+
+      // 2. Also sync every page to public.pages so external mobile scans can resolve instantly without auth!
+      for (const p of newPages) {
+        const chan = newChannels.find(c => c.id === p.channel_id) || newChannels[0];
+        try {
+          await supabase
+            .from('pages')
+            .upsert({
+              id: p.id,
+              slug: p.slug,
+              user_id: user?.id || null,
+              channel_id: p.channel_id,
+              title: p.title,
+              campaign_name: p.campaign_name,
+              badge_text: p.badge_text,
+              headline: p.headline,
+              subheadline: p.subheadline,
+              product_links: p.product_links,
+              lead_capture_enabled: p.lead_capture_enabled,
+              lead_capture_fields: p.lead_capture_fields,
+              lead_magnet_title: p.lead_magnet_title,
+              lead_capture_button_text: p.lead_capture_button_text,
+              channel_data: chan || null,
+              total_scans: p.total_scans || 0,
+              total_leads: p.total_leads || 0,
+              total_clicks: p.total_clicks || 0,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+        } catch (pageErr) {
+          // Silent fallback if table not yet run
+        }
+      }
     } catch (err) {
-      console.warn('Auto-save to Supabase workflows notice:', err);
+      console.warn('Auto-save to Supabase notice:', err);
     }
   };
 

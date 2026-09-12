@@ -15,7 +15,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../lib/context';
 import { Logo } from './Logo';
 import { signOut } from '../lib/auth';
-import { MascotAssistant } from './MascotAssistant';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -280,9 +279,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
           {children}
         </div>
-
-        {/* Floating Mascot Interactive Assistant across all dashboard pages */}
-        <MascotAssistant />
       </main>
     </div>
   );
