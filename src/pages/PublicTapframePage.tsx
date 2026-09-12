@@ -32,12 +32,13 @@ export const PublicTapframePage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   // 1. Try to find page from memory
   const localPage = pages.find(p => p.slug === slug || p.id === slug);
   const localChannel = channels.find(c => c.id === localPage?.channel_id);
 
-  // 2. If not found in memory (e.g. viewer is scanning on their mobile device), fetch from Supabase
+  // 2. If not found in memory (e.g. viewer is scanning on external mobile device), fetch from Supabase
   useEffect(() => {
     let isMounted = true;
 
@@ -96,7 +97,7 @@ export const PublicTapframePage: React.FC = () => {
     created_at: new Date().toISOString()
   };
 
-  // If destination is direct external URL, redirect immediately
+  // Direct External URL mode redirect immediately
   useEffect(() => {
     if (page && page.destination_type === 'external_url' && page.external_url) {
       const timer = setTimeout(() => {
@@ -130,7 +131,7 @@ export const PublicTapframePage: React.FC = () => {
     );
   }
 
-  // If external redirect mode
+  // If direct external redirect mode
   if (page.destination_type === 'external_url' && page.external_url) {
     return (
       <div className="min-h-screen bg-[#090A0F] text-white flex flex-col items-center justify-center p-6 text-center">
@@ -152,6 +153,7 @@ export const PublicTapframePage: React.FC = () => {
   const collectName = page.lead_capture_fields?.collect_name ?? false;
   const collectPhone = page.lead_capture_fields?.collect_phone ?? false;
   const productLinks = page.product_links || [];
+  const primaryDestinationUrl = productLinks[0]?.url || page.lead_magnet_download_url || '';
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +176,7 @@ export const PublicTapframePage: React.FC = () => {
         city: 'Mobile User',
       });
 
-      // Also record directly to Supabase public leads table if exists
+      // Also record to Supabase leads table
       try {
         await supabase
           .from('leads')
@@ -195,16 +197,38 @@ export const PublicTapframePage: React.FC = () => {
       // Fire celebratory confetti!
       try {
         confetti({
-          particleCount: 90,
-          spread: 75,
+          particleCount: 100,
+          spread: 80,
           origin: { y: 0.6 }
         });
       } catch (err) {}
 
       setSubmitted(true);
+
+      // Requirement: Once the person clicks on button, it then redirects to the product link for the user
+      if (primaryDestinationUrl) {
+        setRedirecting(true);
+        setTimeout(() => {
+          let target = primaryDestinationUrl;
+          if (!target.startsWith('http://') && !target.startsWith('https://')) {
+            target = 'https://' + target;
+          }
+          window.location.href = target;
+        }, 1500);
+      }
     } catch (err) {
       console.error(err);
       setSubmitted(true);
+      if (primaryDestinationUrl) {
+        setRedirecting(true);
+        setTimeout(() => {
+          let target = primaryDestinationUrl;
+          if (!target.startsWith('http://') && !target.startsWith('https://')) {
+            target = 'https://' + target;
+          }
+          window.location.href = target;
+        }, 1500);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -212,7 +236,11 @@ export const PublicTapframePage: React.FC = () => {
 
   const handleLinkClick = (url: string) => {
     recordClick(page.id);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    let target = url;
+    if (!target.startsWith('http://') && !target.startsWith('https://')) {
+      target = 'https://' + target;
+    }
+    window.open(target, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -222,7 +250,7 @@ export const PublicTapframePage: React.FC = () => {
 
       {/* Main Mobile-First Container */}
       <div className="w-full max-w-md mx-auto relative z-10 flex flex-col items-center text-center">
-        {/* Creator Channel Header */}
+        {/* 1. Creator Channel Header */}
         <div className="w-full flex items-center justify-between pb-4 mb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             {channel.avatar_url && (
@@ -252,7 +280,11 @@ export const PublicTapframePage: React.FC = () => {
             mood={submitted ? 'celebrate' : 'wave'} 
             size="xs" 
             badge="Scan Connected!"
-            message={submitted ? "Yay! Resource download unlocked below! 🎉" : "Welcome! Drop your details below for instant access."} 
+            message={
+              submitted 
+                ? (redirecting ? "Access granted! Redirecting to your resource now... 🚀" : "Access granted! Click below to open your resource 🎉")
+                : "Welcome! Enter your details below to get instant access."
+            } 
           />
         </div>
 
@@ -267,27 +299,27 @@ export const PublicTapframePage: React.FC = () => {
           </div>
         )}
 
-        {/* Badge Ribbon */}
+        {/* 2. Badge / Callout Ribbon */}
         {page.badge_text && (
           <div className="inline-block px-3.5 py-1 rounded-full bg-violet-600/30 border border-violet-500/40 text-xs font-bold text-violet-300 mb-3 shadow-sm">
             {page.badge_text}
           </div>
         )}
 
-        {/* Main Headline */}
+        {/* 3. Main Headline */}
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight tracking-tight mb-3">
           {page.headline || page.title}
         </h1>
 
-        {/* Subheadline */}
+        {/* Subheadline / Description */}
         {page.subheadline && (
           <p className="text-sm text-slate-300 mb-6 leading-relaxed">
             {page.subheadline}
           </p>
         )}
 
-        {/* Lead Capture Box */}
-        {page.lead_capture_enabled && (
+        {/* 4. Lead Capture Form (Name, Email, Phone + [Get Access] button) */}
+        {page.lead_capture_enabled ? (
           <div className="w-full p-5 rounded-2xl bg-[#121422] border border-violet-500/30 shadow-2xl shadow-violet-950/40 mb-5 text-left relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -295,10 +327,10 @@ export const PublicTapframePage: React.FC = () => {
               <form onSubmit={handleLeadSubmit} className="space-y-3 relative z-10">
                 <div className="flex items-center gap-2 text-xs font-bold text-violet-300">
                   <Sparkles className="w-4 h-4 text-violet-400" />
-                  <span>{page.lead_magnet_title || 'Free Download for Viewers'}</span>
+                  <span>{page.lead_magnet_title || 'Free Strategy Guide & Template'}</span>
                 </div>
 
-                {/* Name Field if enabled */}
+                {/* Full Name Field if enabled */}
                 {collectName && (
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
@@ -326,7 +358,7 @@ export const PublicTapframePage: React.FC = () => {
                   />
                 </div>
 
-                {/* Phone Field if enabled */}
+                {/* Phone No. Field if enabled */}
                 {collectPhone && (
                   <div className="relative">
                     <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
@@ -343,13 +375,13 @@ export const PublicTapframePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] cursor-pointer"
+                  className="w-full py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] cursor-pointer"
                 >
                   {submitting ? (
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>{page.lead_capture_button_text || 'Get Instant Access'}</span>
+                      <span>{page.lead_capture_button_text || 'Get Access'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -357,50 +389,72 @@ export const PublicTapframePage: React.FC = () => {
 
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 pt-1">
                   <Lock className="w-3 h-3 text-emerald-400" />
-                  <span>Zero spam. Direct instant access link delivered immediately.</span>
+                  <span>Instant access granted immediately upon submission.</span>
                 </div>
               </form>
             ) : (
-              <div className="text-center py-4 space-y-3 relative z-10 animate-fade-in">
+              /* 5. Once submitted: Displays Unlocked State & Redirects to Product Link */
+              <div className="text-center py-4 space-y-4 relative z-10 animate-fade-in">
                 <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">You're All Set! 🎉</h3>
+                  <h3 className="text-base font-bold text-white">Access Unlocked! 🎉</h3>
                   <p className="text-xs text-slate-300 mt-1">
-                    Your access details were sent to <strong className="text-white">{email}</strong>.
+                    {redirecting 
+                      ? "Redirecting you directly to your product/resource..."
+                      : `Details delivered to ${email}. Click below to access:`}
                   </p>
                 </div>
-                {page.lead_magnet_download_url && (
+
+                {/* Primary Destination Action Button */}
+                {primaryDestinationUrl && (
                   <a
-                    href={page.lead_magnet_download_url}
+                    href={primaryDestinationUrl.startsWith('http') ? primaryDestinationUrl : `https://${primaryDestinationUrl}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20"
+                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-transform hover:scale-105"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Resource Now</span>
+                    <span>Open {productLinks[0]?.title || 'Resource Link'}</span>
+                    <ExternalLink className="w-4 h-4" />
                   </a>
+                )}
+
+                {/* If multiple product links exist, show all unlocked links */}
+                {productLinks.length > 1 && (
+                  <div className="space-y-2 pt-2 border-t border-white/10 text-left">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">All Unlocked Resources:</span>
+                    {productLinks.slice(1).map((link) => (
+                      <button
+                        key={link.id}
+                        onClick={() => handleLinkClick(link.url)}
+                        className="w-full py-2.5 px-3 rounded-lg bg-[#0B0D15] hover:bg-[#151828] border border-white/10 text-white text-xs font-semibold flex items-center justify-between cursor-pointer"
+                      >
+                        <span className="truncate">{link.title || 'Product Link'}</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-violet-400" />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
           </div>
-        )}
-
-        {/* Product Links */}
-        {productLinks.length > 0 && (
-          <div className="w-full space-y-2.5 mb-6">
-            {productLinks.map((link) => (
-              <button
-                key={link.id}
-                onClick={() => handleLinkClick(link.url)}
-                className="w-full py-3.5 px-4 rounded-xl bg-[#121422] hover:bg-[#181B2D] border border-white/10 text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow transition-all hover:scale-[1.01] cursor-pointer"
-              >
-                <span>{link.title || 'View Resource'}</span>
-                <ExternalLink className="w-4 h-4 text-violet-400" />
-              </button>
-            ))}
-          </div>
+        ) : (
+          /* When lead capture is disabled, product links are shown directly */
+          productLinks.length > 0 && (
+            <div className="w-full space-y-2.5 mb-6">
+              {productLinks.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => handleLinkClick(link.url)}
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#121422] hover:bg-[#181B2D] border border-white/10 text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow transition-all hover:scale-[1.01] cursor-pointer"
+                >
+                  <span>{link.title || 'View Resource'}</span>
+                  <ExternalLink className="w-4 h-4 text-violet-400" />
+                </button>
+              ))}
+            </div>
+          )
         )}
       </div>
 
