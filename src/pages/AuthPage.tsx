@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signIn, signUp, signInWithGoogle } from '../lib/auth';
+import { signIn, signUp } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { Mascot } from '../components/Mascot';
 import { ArrowRight, Lock, Mail, User, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useApp } from '../lib/context';
 
 export const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -18,6 +19,7 @@ export const AuthPage: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const { channels } = useApp();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,22 +30,28 @@ export const AuthPage: React.FC = () => {
 
     try {
       if (isSignUp) {
-        const data = await signUp(email, password, fullName);
+        const data = await signUp(email.trim(), password, fullName.trim());
         if (data.user && !data.session) {
-          setNotice('Account created! If email confirmation is enabled in your Supabase project, check your inbox to confirm, or try logging in.');
+          setNotice('Account created! If email confirmation is enabled in your Supabase project, please check your inbox to confirm before logging in.');
           setIsSignUp(false);
         } else {
+          // New users must setup channel branding first!
           navigate('/channel-setup');
         }
       } else {
-        await signIn(email, password);
-        navigate('/dashboard');
+        await signIn(email.trim(), password);
+        // If user already has a channel, go to dashboard; otherwise prompt channel setup
+        if (channels && channels.length > 0) {
+          navigate('/dashboard');
+        } else {
+          navigate('/channel-setup');
+        }
       }
     } catch (err: any) {
       console.error('Auth error:', err);
       const msg = err.message || '';
       if (msg.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please check your credentials or click "Instant Demo Preview" below.');
+        setError('Invalid email or password. Please check your credentials or create a new account.');
       } else if (msg.includes('User already registered')) {
         setError('An account with this email already exists. Please sign in instead.');
         setIsSignUp(false);
@@ -52,24 +60,11 @@ export const AuthPage: React.FC = () => {
       } else if (msg.includes('Password should be at least')) {
         setError('Password must be at least 6 characters long.');
       } else {
-        setError(msg || 'Authentication error. You can also explore instantly using the demo button.');
+        setError(msg || 'Authentication error. Please try again.');
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleAuth = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      console.warn('Google OAuth initiated', err);
-      setError(err?.message || 'Google OAuth is not configured on this Supabase project yet. Use email/password or Instant Demo.');
-    }
-  };
-
-  const handleDemoLogin = () => {
-    navigate('/dashboard');
   };
 
   return (
@@ -87,12 +82,12 @@ export const AuthPage: React.FC = () => {
             mood={isSignUp ? 'celebrate' : 'wave'} 
             size="sm"
             badge={isSignUp ? 'Welcome New Creator!' : 'Welcome Back!'}
-            message={isSignUp ? 'Excited to help you capture leads from your videos!' : 'Great to see you again! Ready to check your scans?'}
+            message={isSignUp ? 'Excited to help you capture leads from your videos!' : 'Welcome back! Ready to manage your video Tapframes?'}
           />
         </div>
 
         <p className="text-sm text-slate-400">
-          {isSignUp ? 'Create your creator account in seconds' : 'Sign in to your ClearpathQR dashboard'}
+          {isSignUp ? 'Create your creator account with email' : 'Sign in to your ClearpathQR account'}
         </p>
       </div>
 
@@ -150,7 +145,7 @@ export const AuthPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Ali Abdaal or Growth Academy"
+                  placeholder="e.g. Oluwaseun Amusan"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
@@ -166,7 +161,7 @@ export const AuthPage: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="creator@yourbrand.com"
+                placeholder="you@yourdomain.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
@@ -206,44 +201,9 @@ export const AuthPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/10" />
-          </div>
-          <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
-            <span className="bg-[#121422] px-3 text-slate-500">Or continue with</span>
-          </div>
-        </div>
-
-        {/* Quick Demo Access Button */}
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Instant Demo Preview (Pre-seeded Channels & Stats)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleGoogleAuth}
-            className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#EA4335" d="M12 5c1.5 0 2.8.5 3.9 1.4l2.9-2.9C17 1.8 14.7 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.8C6.2 7.2 8.9 5 12 5z"/>
-              <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-              <path fill="#FBBC05" d="M5.3 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.7-2.8z"/>
-              <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.2-6.7-5.2L1.6 16c1.9 3.8 5.8 7 10.4 7z"/>
-            </svg>
-            <span>Continue with Google</span>
-          </button>
-        </div>
-
-        {/* Footer info */}
+        {/* Clean Footer info */}
         <p className="mt-6 text-center text-[11px] text-slate-500">
-          By signing up, you agree to our Terms of Service & Privacy Policy.
+          By continuing, you agree to ClearpathQR Terms & Privacy Policy.
         </p>
       </div>
     </div>

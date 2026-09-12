@@ -1,43 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../lib/context';
 import { 
   Tv, 
   Save, 
-  CheckCircle2
+  CheckCircle2,
+  Upload,
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Mascot } from '../components/Mascot';
 
 export const ChannelBrandingPage: React.FC = () => {
   const { activeChannel, updateChannel, channels, setActiveChannel } = useApp();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [name, setName] = useState(activeChannel?.name || 'Ali Abdaal');
-  const [handle, setHandle] = useState(activeChannel?.handle || '@AliAbdaal');
+  const [name, setName] = useState(activeChannel?.name || '');
+  const [handle, setHandle] = useState(activeChannel?.handle || '');
   const [platform, setPlatform] = useState(activeChannel?.platform || 'youtube');
-  const [subscriberCount, setSubscriberCount] = useState(activeChannel?.subscriber_count || '5.2M subscribers');
-  const [avatarUrl, setAvatarUrl] = useState(activeChannel?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80');
+  const [subscriberCount, setSubscriberCount] = useState(activeChannel?.subscriber_count || '');
+  const [avatarUrl, setAvatarUrl] = useState(activeChannel?.avatar_url || '');
   const [primaryColor, setPrimaryColor] = useState(activeChannel?.primary_color || '#8B5CF6');
   const [description, setDescription] = useState(activeChannel?.description || '');
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
 
-  const predefinedAvatars = [
-    { label: 'Ali (Mock Creator)', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
-    { label: 'Maya (Media Creator)', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
-    { label: 'Tech Pro', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
-    { label: 'Podcast Host', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
-  ];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit strictly enforced
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setUploadError(`File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 10MB limit. Please upload an image under 10MB.`);
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file (PNG, JPG, WEBP, SVG).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setAvatarUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeChannel) return;
 
     await updateChannel(activeChannel.id, {
-      name,
-      handle,
+      name: name.trim(),
+      handle: handle.trim(),
       platform,
-      subscriber_count: subscriberCount,
+      subscriber_count: subscriberCount.trim(),
       avatar_url: avatarUrl,
       primary_color: primaryColor,
-      description,
+      description: description.trim(),
     });
 
     setSavedNotice(true);
@@ -53,7 +77,7 @@ export const ChannelBrandingPage: React.FC = () => {
             mood="float" 
             size="sm" 
             badge="Brand Studio" 
-            message="Your logo and colors automatically skin every QR code landing page!" 
+            message="Your channel logo and colors automatically skin all QR code landing pages for your viewers!" 
           />
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-400 mb-1">
@@ -72,106 +96,145 @@ export const ChannelBrandingPage: React.FC = () => {
         {savedNotice && (
           <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 self-start md:self-auto animate-in fade-in">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Channel Settings Updated!</span>
+            <span>Channel Settings Saved!</span>
           </div>
         )}
       </div>
 
       {/* Main Form */}
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Channel Selection Bar */}
-        <div className="p-4 rounded-2xl bg-[#11131E] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs font-bold text-white">Switch Editing Channel</div>
-            <div className="text-[11px] text-slate-400">Select which channel brand you are modifying.</div>
-          </div>
+        {/* Channel Selection Bar if multiple channels exist */}
+        {channels.length > 1 && (
+          <div className="p-4 rounded-2xl bg-[#11131E] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-bold text-white">Switch Editing Channel</div>
+              <div className="text-[11px] text-slate-400">Select which channel brand you are modifying.</div>
+            </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {channels.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setActiveChannel(c);
-                  setName(c.name);
-                  setHandle(c.handle);
-                  setPlatform(c.platform);
-                  setSubscriberCount(c.subscriber_count || '');
-                  setAvatarUrl(c.avatar_url);
-                  setPrimaryColor(c.primary_color);
-                  setDescription(c.description || '');
-                }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                  activeChannel?.id === c.id
-                    ? 'bg-violet-600/20 border-violet-500 text-white'
-                    : 'bg-[#0B0D15] border-white/5 text-slate-400 hover:text-white'
-                }`}
-              >
-                <img src={c.avatar_url} alt={c.name} className="w-5 h-5 rounded-full object-cover" />
-                <span>{c.name}</span>
-              </button>
-            ))}
+            <div className="flex items-center gap-2 flex-wrap">
+              {channels.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveChannel(c);
+                    setName(c.name);
+                    setHandle(c.handle);
+                    setPlatform(c.platform);
+                    setSubscriberCount(c.subscriber_count || '');
+                    setAvatarUrl(c.avatar_url);
+                    setPrimaryColor(c.primary_color);
+                    setDescription(c.description || '');
+                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    activeChannel?.id === c.id
+                      ? 'bg-violet-600/20 border-violet-500 text-white'
+                      : 'bg-[#0B0D15] border-white/5 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {c.avatar_url && <img src={c.avatar_url} alt={c.name} className="w-5 h-5 rounded-full object-cover" />}
+                  <span>{c.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Brand Details Card */}
         <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-5">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <img
-                src={avatarUrl}
-                alt={name}
-                className="w-20 h-20 rounded-2xl object-cover ring-2 ring-violet-500/50 shadow-xl"
-              />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-violet-600 flex items-center justify-center text-white text-xs shadow">
-                <Tv className="w-3.5 h-3.5" />
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Channel Logo / Avatar <span className="text-slate-500 font-normal">(Max 10MB)</span>
+            </label>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl bg-[#0B0D15] border border-white/10">
+              <div className="relative shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={name || 'Channel Logo'}
+                    className="w-16 h-16 rounded-full object-cover ring-2 ring-violet-500 shadow-md"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                    <ImageIcon className="w-7 h-7" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2 w-full">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload New Logo (up to 10MB)</span>
+                  </button>
+
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl('')}
+                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-slate-500">
+                  Or paste direct image URL
+                </div>
+
+                <input
+                  type="url"
+                  value={avatarUrl.startsWith('data:') ? '' : avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://yourbrand.com/logo.png"
+                  className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                />
               </div>
             </div>
 
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Channel Avatar / Logo Image URL</label>
-              <input
-                type="url"
-                required
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-violet-500"
-              />
-              <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
-                <span>Quick samples:</span>
-                {predefinedAvatars.map((av, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setAvatarUrl(av.url)}
-                    className="text-violet-400 hover:text-violet-300 underline"
-                  >
-                    {av.label.split(' ')[0]}
-                  </button>
-                ))}
+            {uploadError && (
+              <div className="mt-2 p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-1.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{uploadError}</span>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/5">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Channel Name</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Channel Name *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500"
+                placeholder="e.g. My YouTube Channel"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Handle / Username</label>
               <input
                 type="text"
-                required
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-violet-500"
+                placeholder="e.g. @creator"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
               />
             </div>
           </div>
@@ -183,8 +246,8 @@ export const ChannelBrandingPage: React.FC = () => {
                 type="text"
                 value={subscriberCount}
                 onChange={(e) => setSubscriberCount(e.target.value)}
-                placeholder="e.g. 5.2M subscribers"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500"
+                placeholder="e.g. 100K subscribers"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
               />
             </div>
 
@@ -213,7 +276,8 @@ export const ChannelBrandingPage: React.FC = () => {
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500"
+              placeholder="A short description of what you teach, produce, or offer..."
+              className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
             />
           </div>
 

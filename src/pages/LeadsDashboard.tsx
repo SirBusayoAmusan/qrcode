@@ -5,13 +5,16 @@ import {
   Search, 
   Globe, 
   Smartphone, 
-  Layers
+  Layers,
+  Users,
+  QrCode
 } from 'lucide-react';
 import { Mascot } from '../components/Mascot';
+import { Link } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 
 export const LeadsDashboard: React.FC = () => {
-  const { leads } = useApp();
+  const { leads, pages } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
 
@@ -74,15 +77,19 @@ export const LeadsDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header with Mascot Celebration */}
+    <div className="space-y-8 animate-fade-in pb-12">
+      {/* Header with Mascot */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-[#17142B] via-[#121422] to-[#121829] border border-violet-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-5">
           <Mascot 
-            mood="celebrate" 
+            mood={leads.length > 0 ? 'celebrate' : 'curious'} 
             size="sm" 
             badge="Audience CRM" 
-            message={`You have ${leads.length} captured leads from your video scans! Ready to sync to your email list.`} 
+            message={
+              leads.length > 0
+                ? `You have ${leads.length} real lead opt-in${leads.length > 1 ? 's' : ''} captured! Export anytime to CSV.`
+                : 'Your CRM updates in real time whenever a viewer scans your on-screen QR code and enters their email.'
+            } 
           />
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-400 mb-1">
@@ -93,146 +100,170 @@ export const LeadsDashboard: React.FC = () => {
               Captured Leads & Audiences
             </h1>
             <p className="text-xs text-slate-300 mt-1 max-w-lg">
-              Every viewer who entered their email across all your video tapframes.
+              Every viewer who entered their email across your active video Tapframes.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={exportCSV}
-          className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-105 self-stretch md:self-auto cursor-pointer"
-        >
-          <Download className="w-4 h-4" />
-          <span>Export CSV ({filteredLeads.length})</span>
-        </button>
+        {leads.length > 0 && (
+          <button
+            onClick={exportCSV}
+            className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-105 self-stretch md:self-auto cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export CSV ({filteredLeads.length})</span>
+          </button>
+        )}
       </div>
 
-      {/* Campaign Grouping Visible in Leads View */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-          <Layers className="w-4 h-4 text-violet-400" />
-          <span>Campaign Cohorts & Source Performance</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div
-            onClick={() => setSelectedCampaign('all')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-              selectedCampaign === 'all'
-                ? 'bg-violet-600/15 border-violet-500 text-white'
-                : 'bg-[#11131E] border-white/5 text-slate-400 hover:border-white/20'
-            }`}
+      {leads.length === 0 ? (
+        /* Zero state when no leads captured yet */
+        <div className="p-12 rounded-3xl bg-[#11131E] border border-white/5 text-center flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-4">
+            <Users className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-1">No leads captured yet</h3>
+          <p className="text-sm text-slate-400 max-w-sm mb-6">
+            When viewers scan your QR codes and fill out the lead magnet form, their emails and locations will appear here in real time.
+          </p>
+          <Link
+            to="/dashboard"
+            className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold shadow-lg shadow-violet-600/25 flex items-center gap-2"
           >
-            <div className="text-xs font-semibold text-slate-400">All Campaigns Combined</div>
-            <div className="text-2xl font-black text-white mt-1">{leads.length}</div>
-            <div className="text-[11px] text-violet-400 mt-1">100% Total captured leads</div>
+            <QrCode className="w-4 h-4" />
+            <span>View My QR Codes</span>
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Campaign Grouping Visible in Leads View */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <Layers className="w-4 h-4 text-violet-400" />
+              <span>Campaign Cohorts & Source Performance</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div
+                onClick={() => setSelectedCampaign('all')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                  selectedCampaign === 'all'
+                    ? 'bg-violet-600/15 border-violet-500 text-white'
+                    : 'bg-[#11131E] border-white/5 text-slate-400 hover:border-white/20'
+                }`}
+              >
+                <div className="text-xs font-semibold text-slate-400">All Campaigns Combined</div>
+                <div className="text-2xl font-black text-white mt-1">{leads.length}</div>
+                <div className="text-[11px] text-violet-400 mt-1">100% Total captured leads</div>
+              </div>
+
+              {campaignGroupStats.map((group, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setSelectedCampaign(group.campaign_name)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                    selectedCampaign === group.campaign_name
+                      ? 'bg-violet-600/15 border-violet-500 text-white'
+                      : 'bg-[#11131E] border-white/5 text-slate-400 hover:border-white/20'
+                  }`}
+                >
+                  <div className="text-xs font-semibold text-slate-300 truncate">{group.campaign_name}</div>
+                  <div className="text-2xl font-black text-white mt-1">{group.count}</div>
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    Latest: {new Date(group.latest).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {campaignGroupStats.map((group, idx) => (
-            <div
-              key={idx}
-              onClick={() => setSelectedCampaign(group.campaign_name)}
-              className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                selectedCampaign === group.campaign_name
-                  ? 'bg-violet-600/15 border-violet-500 text-white'
-                  : 'bg-[#11131E] border-white/5 text-slate-400 hover:border-white/20'
-              }`}
-            >
-              <div className="text-xs font-semibold text-slate-300 truncate">{group.campaign_name}</div>
-              <div className="text-2xl font-black text-white mt-1">{group.count}</div>
-              <div className="text-[11px] text-slate-400 mt-1">
-                Latest: {new Date(group.latest).toLocaleDateString()}
-              </div>
+          {/* Filter and Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Search by email, name, country..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#11131E] border border-white/5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
+              />
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Search by email, name, country..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#11131E] border border-white/5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
-          />
-        </div>
+            <div className="text-xs text-slate-400">
+              Showing <strong>{filteredLeads.length}</strong> of {leads.length} leads
+            </div>
+          </div>
 
-        <div className="text-xs text-slate-400">
-          Showing <strong>{filteredLeads.length}</strong> of {leads.length} leads
-        </div>
-      </div>
+          {/* Leads Table */}
+          <div className="rounded-2xl bg-[#11131E] border border-white/5 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white/[0.02] border-b border-white/5 text-slate-400 font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3.5 px-4">Contact / Email</th>
+                    <th className="py-3.5 px-4">Campaign Group</th>
+                    <th className="py-3.5 px-4">Page Title</th>
+                    <th className="py-3.5 px-4">Location</th>
+                    <th className="py-3.5 px-4">Source Device</th>
+                    <th className="py-3.5 px-4">Captured</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-slate-300">
+                  {filteredLeads.map((lead) => (
+                    <tr key={lead.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center font-bold">
+                            {lead.name ? lead.name[0].toUpperCase() : lead.email[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-white">{lead.name || 'Anonymous Viewer'}</div>
+                            <div className="text-slate-400 font-mono text-[11px]">{lead.email}</div>
+                          </div>
+                        </div>
+                      </td>
 
-      {/* Leads Table */}
-      <div className="rounded-2xl bg-[#11131E] border border-white/5 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-white/[0.02] border-b border-white/5 text-slate-400 font-semibold uppercase tracking-wider">
-              <tr>
-                <th className="py-3.5 px-4">Contact / Email</th>
-                <th className="py-3.5 px-4">Campaign Group</th>
-                <th className="py-3.5 px-4">Page Title</th>
-                <th className="py-3.5 px-4">Location</th>
-                <th className="py-3.5 px-4">Source Device</th>
-                <th className="py-3.5 px-4">Captured</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 text-slate-300">
-              {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center font-bold">
-                        {lead.name ? lead.name[0].toUpperCase() : lead.email[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">{lead.name || 'Anonymous Viewer'}</div>
-                        <div className="text-slate-400 font-mono text-[11px]">{lead.email}</div>
-                      </div>
-                    </div>
-                  </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-1 rounded-lg bg-violet-950/60 border border-violet-500/20 text-violet-300 text-[11px] font-medium inline-block">
+                          {lead.campaign_name || 'General'}
+                        </span>
+                      </td>
 
-                  <td className="py-3.5 px-4">
-                    <span className="px-2.5 py-1 rounded-lg bg-violet-950/60 border border-violet-500/20 text-violet-300 text-[11px] font-medium inline-block">
-                      {lead.campaign_name || 'General'}
-                    </span>
-                  </td>
+                      <td className="py-3.5 px-4 max-w-xs truncate text-slate-300 font-medium">
+                        {lead.page_title}
+                      </td>
 
-                  <td className="py-3.5 px-4 max-w-xs truncate text-slate-300 font-medium">
-                    {lead.page_title}
-                  </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{lead.city ? `${lead.city}, ` : ''}{lead.country}</span>
+                        </div>
+                      </td>
 
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-slate-500" />
-                      <span>{lead.city ? `${lead.city}, ` : ''}{lead.country}</span>
-                    </div>
-                  </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <Smartphone className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="capitalize">{lead.referrer || lead.source}</span>
+                        </div>
+                      </td>
 
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5">
-                      <Smartphone className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="capitalize">{lead.referrer || lead.source}</span>
-                    </div>
-                  </td>
-
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
-                    {new Date(lead.created_at).toLocaleString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                        {new Date(lead.created_at).toLocaleString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

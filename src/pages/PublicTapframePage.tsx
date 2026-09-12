@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../lib/context';
+import { supabase } from '../lib/supabase';
 import { 
   CheckCircle2, 
   Download, 
@@ -13,45 +14,113 @@ import {
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Mascot } from '../components/Mascot';
+import type { TapframePage, Channel } from '../types';
 import confetti from 'canvas-confetti';
 
 export const PublicTapframePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { pages, channels, addLead, recordScan, recordClick } = useApp();
 
+  const [remotePage, setRemotePage] = useState<TapframePage | null>(null);
+  const [remoteChannel, setRemoteChannel] = useState<Channel | null>(null);
+  const [loadingPage, setLoadingPage] = useState(true);
+
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Find page by slug or id
-  const page = pages.find(p => p.slug === slug || p.id === slug) || pages[0];
-  const channel = channels.find(c => c.id === page?.channel_id) || channels[0];
+  // 1. Try to find page from app context
+  const localPage = pages.find(p => p.slug === slug || p.id === slug);
+  const localChannel = channels.find(c => c.id === localPage?.channel_id);
 
-  // Record scan on initial load
+  // 2. If not found in memory (e.g. viewer is scanning on their personal phone), fetch directly from Supabase
   useEffect(() => {
-    if (page) {
-      recordScan(page.id);
+    let isMounted = true;
+
+    async function fetchPublicData() {
+      if (localPage) {
+        setRemotePage(localPage);
+        setRemoteChannel(localChannel || channels[0] || null);
+        setLoadingPage(false);
+        recordScan(localPage.id);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('workflows')
+          .select('data')
+          .limit(50);
+
+        if (!error && data && data.length > 0) {
+          for (const row of data) {
+            const workflowData = row.data as { pages?: TapframePage[]; channels?: Channel[] };
+            const found = workflowData.pages?.find(p => p.slug === slug || p.id === slug);
+            if (found && isMounted) {
+              setRemotePage(found);
+              const chan = workflowData.channels?.find(c => c.id === found.channel_id) || workflowData.channels?.[0];
+              if (chan) setRemoteChannel(chan);
+              setLoadingPage(false);
+              recordScan(found.id);
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Public page remote fetch notice:', err);
+      } finally {
+        if (isMounted) setLoadingPage(false);
+      }
     }
-  }, [page?.id]);
+
+    fetchPublicData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, localPage]);
+
+  const page = localPage || remotePage;
+  const channel = localChannel || remoteChannel || {
+    id: 'ch-fallback',
+    user_id: 'user',
+    name: 'Creator Offer',
+    handle: '@creator',
+    platform: 'youtube',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    primary_color: '#8B5CF6',
+    created_at: new Date().toISOString()
+  };
 
   // If destination is external URL, redirect immediately
   useEffect(() => {
     if (page && page.destination_type === 'external_url' && page.external_url) {
       const timer = setTimeout(() => {
         window.location.href = page.external_url || 'https://google.com';
-      }, 800);
+      }, 700);
       return () => clearTimeout(timer);
     }
   }, [page]);
 
+  if (loadingPage) {
+    return (
+      <div className="min-h-screen bg-[#07080E] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-10 h-10 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mb-4" />
+        <p className="text-xs text-slate-400 font-medium">Connecting to creator Tapframe...</p>
+      </div>
+    );
+  }
+
   if (!page) {
     return (
-      <div className="min-h-screen bg-[#090A0F] text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#090A0F] text-white flex flex-col items-center justify-center p-6 text-center">
         <Logo to="/" size="md" className="mb-4" />
         <h2 className="text-xl font-bold mb-2">Offer Not Found</h2>
-        <p className="text-sm text-slate-400 mb-4">This dynamic QR link may have been updated or archived.</p>
-        <Link to="/" className="px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-semibold">
-          Go to Home
+        <p className="text-xs text-slate-400 mb-6 max-w-sm">
+          This dynamic QR link (/q/{slug}) does not exist or may have been archived by the creator.
+        </p>
+        <Link to="/" className="px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-semibold">
+          Visit ClearpathQR
         </Link>
       </div>
     );
@@ -82,18 +151,36 @@ export const PublicTapframePage: React.FC = () => {
 
     setSubmitting(true);
     try {
+      // 1. Record lead locally in app context
       await addLead({
         page_id: page.id,
         page_title: page.title,
-        campaign_name: page.campaign_name || 'YouTube Campaign',
+        campaign_name: page.campaign_name || 'General Campaign',
         channel_id: channel.id,
-        email,
+        email: email.trim(),
         source: 'Mobile QR Scan',
-        referrer: 'Smart TV Screen',
-        device: 'mobile',
-        country: 'United States',
-        city: 'Online Viewer',
+        referrer: 'Living Room TV Scan',
+        device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : /Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+        country: 'Global Viewer',
+        city: 'Mobile User',
       });
+
+      // 2. Also record directly to Supabase public leads table if enabled
+      try {
+        await supabase
+          .from('leads')
+          .insert({
+            page_id: page.id,
+            page_title: page.title,
+            campaign_name: page.campaign_name || 'General Campaign',
+            channel_id: channel.id,
+            email: email.trim(),
+            source: 'Mobile QR Scan',
+            referrer: 'TV / Video Stream',
+            device: 'mobile',
+            country: 'Global Viewer',
+          });
+      } catch (e) {}
 
       // Fire celebratory confetti!
       try {
@@ -128,18 +215,20 @@ export const PublicTapframePage: React.FC = () => {
         {/* Creator Channel Header — Logo shows automatically */}
         <div className="w-full flex items-center justify-between pb-4 mb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <img
-              src={channel.avatar_url || '/assets/youtube-creator-male.png'}
-              alt={channel.name}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500 shadow-md"
-            />
+            {channel.avatar_url && (
+              <img
+                src={channel.avatar_url}
+                alt={channel.name}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500 shadow-md"
+              />
+            )}
             <div className="text-left">
               <div className="text-xs font-bold text-white flex items-center gap-1">
-                <span>{channel.name}</span>
+                <span>{channel.name || 'Creator Offer'}</span>
                 <span className="w-3.5 h-3.5 rounded-full bg-violet-600 text-white inline-flex items-center justify-center text-[9px] font-bold">✓</span>
               </div>
               <div className="text-[11px] text-slate-400 font-mono">
-                {channel.handle} • {channel.subscriber_count || 'Verified Creator'}
+                {channel.handle || '@creator'} {channel.subscriber_count ? `• ${channel.subscriber_count}` : ''}
               </div>
             </div>
           </div>
@@ -158,7 +247,7 @@ export const PublicTapframePage: React.FC = () => {
         </div>
 
         {/* Video context if associated */}
-        {page.associated_content && (
+        {page.associated_content?.title && (
           <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300">
             <Tv className="w-3 h-3 text-red-500" />
             <span>As seen in: <strong>{page.associated_content.title}</strong></span>
@@ -181,9 +270,11 @@ export const PublicTapframePage: React.FC = () => {
         </h1>
 
         {/* Subheadline */}
-        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-          {page.subheadline || 'Get immediate access to the bundle and all video resources.'}
-        </p>
+        {page.subheadline && (
+          <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+            {page.subheadline}
+          </p>
+        )}
 
         {/* Lead Capture Box */}
         {page.lead_capture_enabled && (
@@ -237,7 +328,7 @@ export const PublicTapframePage: React.FC = () => {
                 <div>
                   <h3 className="text-base font-bold text-white">You're All Set! 🎉</h3>
                   <p className="text-xs text-slate-300 mt-1">
-                    Check your inbox at <strong className="text-white">{email}</strong> or click below to open your resources directly.
+                    Your request was received! Access details sent to <strong className="text-white">{email}</strong>.
                   </p>
                 </div>
                 {page.lead_magnet_download_url && (
@@ -273,19 +364,21 @@ export const PublicTapframePage: React.FC = () => {
         )}
 
         {/* Social Links */}
-        <div className="flex items-center justify-center gap-4 text-slate-400 text-xs pt-2">
-          {page.social_links?.map((s, idx) => (
-            <a
-              key={idx}
-              href={s.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="capitalize hover:text-white transition-colors"
-            >
-              {s.platform}
-            </a>
-          ))}
-        </div>
+        {page.social_links && page.social_links.length > 0 && (
+          <div className="flex items-center justify-center gap-4 text-slate-400 text-xs pt-2">
+            {page.social_links.map((s, idx) => (
+              <a
+                key={idx}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="capitalize hover:text-white transition-colors"
+              >
+                {s.platform}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Powered by ClearpathQR Footer badge */}
