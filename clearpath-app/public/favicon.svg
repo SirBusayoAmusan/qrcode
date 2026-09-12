@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <!-- Soft Shadow/Background -->
+  <rect width="64" height="64" rx="16" fill="#7C3AED"/>
+  
+  <!-- Green Sprout on top of head -->
+  <path d="M32 17C32 10 24 9 24 9C24 9 23 15 28 17" fill="#22C55E"/>
+  <path d="M32 17C32 11 39 10 40 10C40 10 40 16 35 17" fill="#4ADE80"/>
+  <rect x="30.5" y="15" width="3" height="4" rx="1.5" fill="#15803D"/>
+
+  <!-- Orange Headphone/Ears -->
+  <rect x="8" y="24" width="8" height="18" rx="4" fill="#F97316"/>
+  <rect x="48" y="24" width="8" height="18" rx="4" fill="#F97316"/>
+  <rect x="10" y="28" width="4" height="10" rx="2" fill="#38BDF8"/>
+  <rect x="50" y="28" width="4" height="10" rx="2" fill="#38BDF8"/>
+
+  <!-- Robot Head Outer White Frame -->
+  <rect x="13" y="18" width="38" height="30" rx="11" fill="#FFFFFF"/>
+  
+  <!-- Robot Screen / Dark Face -->
+  <rect x="17" y="22" width="30" height="22" rx="7" fill="#0F172A"/>
+
+  <!-- Happy Blue Arc Eyes -->
+  <path d="M22 29C22 26.5 25 26.5 25 29" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M39 29C39 26.5 42 26.5 42 29" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Cute Smiling Mouth -->
+  <path d="M28 34C28 37 36 37 36 34" fill="#38BDF8"/>
+
+  <!-- Robot Body Hint with Green Chevron -->
+  <path d="M20 48C20 48 24 57 32 57C40 57 44 48 44 48" fill="#F8FAFC"/>
+  <path d="M30 50L33 53L30 56" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
