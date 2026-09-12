@@ -41,10 +41,6 @@ export const PageEditor: React.FC = () => {
     return generateUniqueSlug(allSlugs);
   });
   const [campaignName, setCampaignName] = useState(existingPage?.campaign_name || '');
-  const [destinationType, setDestinationType] = useState<'landing_page' | 'external_url'>(
-    existingPage?.destination_type || 'landing_page'
-  );
-  const [externalUrl, setExternalUrl] = useState(existingPage?.external_url || '');
 
   // 2. Streamlined Mobile Page Builder Fields
   const [badgeText, setBadgeText] = useState(existingPage?.badge_text || '');
@@ -134,8 +130,8 @@ export const PageEditor: React.FC = () => {
     title: computedTitle,
     slug: slug || 'my-offer',
     campaign_name: campaignName || `${activeChannel?.name || 'Main'} Campaign`,
-    destination_type: destinationType,
-    external_url: externalUrl,
+    destination_type: 'landing_page',
+    external_url: '',
     status: 'active',
     badge_text: badgeText,
     headline: headline || 'Get My Free Resource Kit',
@@ -188,8 +184,8 @@ export const PageEditor: React.FC = () => {
       title: computedTitle,
       slug: slug.trim(),
       campaign_name: campaignName.trim() || `${activeChannel?.name || 'Main'} Campaign`,
-      destination_type: destinationType,
-      external_url: externalUrl.trim(),
+      destination_type: 'landing_page',
+      external_url: '',
       badge_text: badgeText.trim(),
       headline: headline.trim() || 'Exclusive Video Offer',
       subheadline: subheadline.trim(),
@@ -345,258 +341,202 @@ export const PageEditor: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Destination Mode */}
-            <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
-                  <Sparkles className="w-4 h-4" />
-                  <span>2. Dynamic Destination Mode</span>
+            {/* 2. Streamlined Mobile Landing Page Builder */}
+            <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
+                <Smartphone className="w-4 h-4" />
+                <span>2. Mobile Page Content</span>
+              </div>
+
+              {/* Badge / Callout Ribbon */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Badge / Callout Ribbon</label>
+                <input
+                  type="text"
+                  value={badgeText}
+                  onChange={(e) => setBadgeText(e.target.value)}
+                  placeholder="e.g. Get the Free Package Below"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              {/* Main Headline */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Main Headline</label>
+                <input
+                  type="text"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  placeholder="e.g. The Six Figure Wealth Guide"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-semibold placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              {/* Subheadline / Description */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Subheadline / Description</label>
+                <textarea
+                  rows={2}
+                  value={subheadline}
+                  onChange={(e) => setSubheadline(e.target.value)}
+                  placeholder="e.g. Drop your email below to get the free downloadable guide and resources."
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              {/* Product Destination Links Section */}
+              <div className="p-4 rounded-xl bg-[#0B0D15] border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-violet-400" />
+                      <span>Product Destination Link</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {isPro ? 'Add unlimited product & resource links.' : 'Free tier allows 1 product link.'}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddProductLink}
+                    className="px-3 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Link</span>
+                  </button>
                 </div>
+
+                {productLinks.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-500 border border-dashed border-white/10 rounded-xl">
+                    No product link added. Click "+ Add Link" to set the destination URL where visitors are sent after clicking Get Access.
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    {productLinks.map((link, idx) => (
+                      <div key={link.id || idx} className="p-3 rounded-xl bg-[#11131E] border border-white/10 space-y-2 relative">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-violet-300">
+                            {idx === 0 ? 'Primary Destination Link #1' : `Product Link #${idx + 1}`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProductLink(idx)}
+                            className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer"
+                            title="Remove link"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={link.title}
+                            onChange={(e) => handleUpdateProductLink(idx, 'title', e.target.value)}
+                            placeholder="Name of the product (e.g. Notion Business Template)"
+                            className="w-full px-3 py-1.5 rounded-lg bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                          />
+                        </div>
+
+                        <div>
+                          <input
+                            type="url"
+                            value={link.url}
+                            onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
+                            placeholder="Destination URL (e.g. https://creator.gumroad.com/l/...)"
+                            className="w-full px-3 py-1.5 rounded-lg bg-[#0B0D15] border border-white/10 text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDestinationType('landing_page')}
-                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                    destinationType === 'landing_page'
-                      ? 'bg-violet-600/20 border-violet-500 text-white shadow-lg shadow-violet-600/15'
-                      : 'bg-[#0B0D15] border-white/5 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Smartphone className="w-5 h-5 mb-2 text-violet-400" />
-                  <div className="font-bold text-xs text-white">Mobile Landing Page</div>
-                  <div className="text-[11px] text-slate-400 mt-1">Collect visitor leads and redirect to product links.</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDestinationType('external_url')}
-                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                    destinationType === 'external_url'
-                      ? 'bg-violet-600/20 border-violet-500 text-white shadow-lg shadow-violet-600/15'
-                      : 'bg-[#0B0D15] border-white/5 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <ExternalLink className="w-5 h-5 mb-2 text-indigo-400" />
-                  <div className="font-bold text-xs text-white">Direct External URL</div>
-                  <div className="text-[11px] text-slate-400 mt-1">Instantly redirect to checkout, booking, or sponsor site.</div>
-                </button>
-              </div>
-
-              {destinationType === 'external_url' && (
-                <div className="mt-3 p-4 rounded-xl bg-violet-950/30 border border-violet-500/20">
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Direct Destination URL *</label>
+              {/* Enable Email Lead Capture with Field Selection */}
+              <div className="p-4 rounded-xl bg-[#0B0D15] border border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-white">Enable Email Lead Capture</div>
+                    <div className="text-[11px] text-slate-400">Collect visitor email/phone before granting product access.</div>
+                  </div>
                   <input
-                    type="url"
-                    required
-                    value={externalUrl}
-                    onChange={(e) => setExternalUrl(e.target.value)}
-                    placeholder="https://yourwebsite.com/offer"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                    type="checkbox"
+                    checked={leadCaptureEnabled}
+                    onChange={(e) => setLeadCaptureEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-violet-600 focus:ring-0 cursor-pointer"
                   />
                 </div>
-              )}
+
+                {leadCaptureEnabled && (
+                  <div className="space-y-4 pt-3 border-t border-white/5">
+                    {/* Form Fields to Collect */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Select Visitor Details to Collect:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="p-2.5 rounded-lg bg-[#11131E] border border-violet-500/30 text-white flex items-center gap-2">
+                          <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="font-semibold text-xs">Email</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setCollectName(!collectName)}
+                          className={`p-2.5 rounded-lg border flex items-center gap-2 text-xs cursor-pointer transition-all ${
+                            collectName
+                              ? 'bg-violet-600/20 border-violet-500 text-white'
+                              : 'bg-[#11131E] border-white/10 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {collectName ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
+                          <span>Full Name</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCollectPhone(!collectPhone)}
+                          className={`p-2.5 rounded-lg border flex items-center gap-2 text-xs cursor-pointer transition-all ${
+                            collectPhone
+                              ? 'bg-violet-600/20 border-violet-500 text-white'
+                              : 'bg-[#11131E] border-white/10 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {collectPhone ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
+                          <span>Phone No.</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Lead Magnet Title */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">Lead Magnet / Asset Title</label>
+                      <input
+                        type="text"
+                        value={leadMagnetTitle}
+                        onChange={(e) => setLeadMagnetTitle(e.target.value)}
+                        placeholder="e.g. Free Strategy Guide & Template"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Submit Button CTA Text */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">Submit Button CTA Text</label>
+                      <input
+                        type="text"
+                        value={leadCaptureButtonText}
+                        onChange={(e) => setLeadCaptureButtonText(e.target.value)}
+                        placeholder="e.g. Get Access"
+                        className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* 3. Streamlined Mobile Landing Page Builder */}
-            {destinationType === 'landing_page' && (
-              <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-5">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
-                  <Smartphone className="w-4 h-4" />
-                  <span>3. Mobile Page Content</span>
-                </div>
-
-                {/* Badge / Callout Ribbon */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Badge / Callout Ribbon</label>
-                  <input
-                    type="text"
-                    value={badgeText}
-                    onChange={(e) => setBadgeText(e.target.value)}
-                    placeholder="e.g. Get the Free Package Below"
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                  />
-                </div>
-
-                {/* Main Headline */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Main Headline</label>
-                  <input
-                    type="text"
-                    value={headline}
-                    onChange={(e) => setHeadline(e.target.value)}
-                    placeholder="e.g. The Six Figure Wealth Guide"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-semibold placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                  />
-                </div>
-
-                {/* Subheadline / Description */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Subheadline / Description</label>
-                  <textarea
-                    rows={2}
-                    value={subheadline}
-                    onChange={(e) => setSubheadline(e.target.value)}
-                    placeholder="e.g. Drop your email below to get the free downloadable guide and resources."
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                  />
-                </div>
-
-                {/* Product Links Section (Destination upon clicking Get Access) */}
-                <div className="p-4 rounded-xl bg-[#0B0D15] border border-white/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Link2 className="w-3.5 h-3.5 text-violet-400" />
-                        <span>Product Destination Link</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        {isPro ? 'Add unlimited product & resource links.' : 'Free tier allows 1 product link.'}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleAddProductLink}
-                      className="px-3 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Link</span>
-                    </button>
-                  </div>
-
-                  {productLinks.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-slate-500 border border-dashed border-white/10 rounded-xl">
-                      No product link added. Click "+ Add Link" to set where the user is redirected upon clicking Get Access.
-                    </div>
-                  ) : (
-                    <div className="space-y-3 pt-1">
-                      {productLinks.map((link, idx) => (
-                        <div key={link.id || idx} className="p-3 rounded-xl bg-[#11131E] border border-white/10 space-y-2 relative">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-violet-300">
-                              {idx === 0 ? 'Primary Redirect Link #1' : `Product Link #${idx + 1}`}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveProductLink(idx)}
-                              className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer"
-                              title="Remove link"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          <div>
-                            <input
-                              type="text"
-                              value={link.title}
-                              onChange={(e) => handleUpdateProductLink(idx, 'title', e.target.value)}
-                              placeholder="Name of the product (e.g. Notion Business Template)"
-                              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                            />
-                          </div>
-
-                          <div>
-                            <input
-                              type="url"
-                              value={link.url}
-                              onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
-                              placeholder="Destination URL (e.g. https://creator.gumroad.com/l/...)"
-                              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0D15] border border-white/10 text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Enable Email Lead Capture with Field Selection */}
-                <div className="p-4 rounded-xl bg-[#0B0D15] border border-white/5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-white">Enable Email Lead Capture</div>
-                      <div className="text-[11px] text-slate-400">Collect visitor email/phone before redirecting them to product.</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={leadCaptureEnabled}
-                      onChange={(e) => setLeadCaptureEnabled(e.target.checked)}
-                      className="w-4 h-4 rounded text-violet-600 focus:ring-0 cursor-pointer"
-                    />
-                  </div>
-
-                  {leadCaptureEnabled && (
-                    <div className="space-y-4 pt-3 border-t border-white/5">
-                      {/* Form Fields to Collect */}
-                      <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                          Select Visitor Details to Collect:
-                        </label>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="p-2.5 rounded-lg bg-[#11131E] border border-violet-500/30 text-white flex items-center gap-2">
-                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span className="font-semibold text-xs">Email</span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setCollectName(!collectName)}
-                            className={`p-2.5 rounded-lg border flex items-center gap-2 text-xs cursor-pointer transition-all ${
-                              collectName
-                                ? 'bg-violet-600/20 border-violet-500 text-white'
-                                : 'bg-[#11131E] border-white/10 text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            {collectName ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
-                            <span>Full Name</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setCollectPhone(!collectPhone)}
-                            className={`p-2.5 rounded-lg border flex items-center gap-2 text-xs cursor-pointer transition-all ${
-                              collectPhone
-                                ? 'bg-violet-600/20 border-violet-500 text-white'
-                                : 'bg-[#11131E] border-white/10 text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            {collectPhone ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
-                            <span>Phone No.</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Lead Magnet Title */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">Lead Magnet / Asset Title</label>
-                        <input
-                          type="text"
-                          value={leadMagnetTitle}
-                          onChange={(e) => setLeadMagnetTitle(e.target.value)}
-                          placeholder="e.g. Free Strategy Guide & Template"
-                          className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                        />
-                      </div>
-
-                      {/* Submit Button CTA Text */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">Submit Button CTA Text</label>
-                        <input
-                          type="text"
-                          value={leadCaptureButtonText}
-                          onChange={(e) => setLeadCaptureButtonText(e.target.value)}
-                          placeholder="e.g. Get Access"
-                          className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </form>
         </div>
 

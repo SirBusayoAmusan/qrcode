@@ -4,7 +4,6 @@ import { useApp } from '../lib/context';
 import { supabase } from '../lib/supabase';
 import { 
   CheckCircle2, 
-  Download, 
   ExternalLink, 
   Sparkles, 
   ArrowRight, 
@@ -12,7 +11,8 @@ import {
   User,
   Phone,
   Tv, 
-  Lock
+  Lock,
+  QrCode
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Mascot } from '../components/Mascot';
@@ -97,16 +97,6 @@ export const PublicTapframePage: React.FC = () => {
     created_at: new Date().toISOString()
   };
 
-  // Direct External URL mode redirect immediately
-  useEffect(() => {
-    if (page && page.destination_type === 'external_url' && page.external_url) {
-      const timer = setTimeout(() => {
-        window.location.href = page.external_url || 'https://google.com';
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [page]);
-
   if (loadingPage) {
     return (
       <div className="min-h-screen bg-[#07080E] text-white flex flex-col items-center justify-center p-6 text-center">
@@ -127,25 +117,6 @@ export const PublicTapframePage: React.FC = () => {
         <Link to="/" className="px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-semibold">
           Visit ClearpathQR
         </Link>
-      </div>
-    );
-  }
-
-  // If direct external redirect mode
-  if (page.destination_type === 'external_url' && page.external_url) {
-    return (
-      <div className="min-h-screen bg-[#090A0F] text-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mb-4" />
-        <h2 className="text-lg font-bold">Redirecting you to offer...</h2>
-        <p className="text-xs text-slate-400 mt-1 max-w-sm">
-          Destination: <span className="text-violet-400 font-mono break-all">{page.external_url}</span>
-        </p>
-        <a
-          href={page.external_url}
-          className="mt-4 text-xs underline text-slate-400 hover:text-white"
-        >
-          Click here if not redirected automatically
-        </a>
       </div>
     );
   }
@@ -205,7 +176,7 @@ export const PublicTapframePage: React.FC = () => {
 
       setSubmitted(true);
 
-      // Requirement: Once the person clicks on button, it then redirects to the product link for the user
+      // Once the person clicks on button, it then redirects to the product link for the user
       if (primaryDestinationUrl) {
         setRedirecting(true);
         setTimeout(() => {
@@ -241,6 +212,10 @@ export const PublicTapframePage: React.FC = () => {
       target = 'https://' + target;
     }
     window.open(target, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleGoToLanding = () => {
+    window.location.href = '/';
   };
 
   return (
@@ -393,7 +368,7 @@ export const PublicTapframePage: React.FC = () => {
                 </div>
               </form>
             ) : (
-              /* 5. Once submitted: Displays Unlocked State & Redirects to Product Link */
+              /* Once submitted: Displays Unlocked State & Redirects to Product Link */
               <div className="text-center py-4 space-y-4 relative z-10 animate-fade-in">
                 <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-6 h-6" />
@@ -456,17 +431,53 @@ export const PublicTapframePage: React.FC = () => {
             </div>
           )
         )}
+
+        {/* Viral Growth Loop Marketing Card for Viewers */}
+        <div className="w-full mt-4 pt-4 border-t border-white/10 text-left">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              handleGoToLanding();
+            }}
+            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/70 via-[#121424] to-indigo-950/70 border border-violet-500/30 hover:border-violet-400/60 transition-all hover:scale-[1.01] shadow-xl group flex items-center justify-between gap-3 cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-violet-600/30 border border-violet-500/40 flex items-center justify-center shrink-0 text-violet-300 group-hover:scale-110 transition-transform">
+                <QrCode className="w-4 h-4 text-violet-300" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-white group-hover:text-violet-300 transition-colors">
+                  Want dynamic QR codes for your YouTube channel?
+                </div>
+                <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                  <span>Create your free video Tapframe</span>
+                  <span className="text-violet-400 font-semibold">on ClearpathQR →</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-2.5 py-1 rounded-lg bg-violet-600/40 group-hover:bg-violet-600 text-white text-[11px] font-bold shrink-0 flex items-center gap-1 transition-all">
+              <span>Create</span>
+              <ArrowRight className="w-3 h-3" />
+            </div>
+          </a>
+        </div>
       </div>
 
-      {/* Powered by ClearpathQR Footer badge */}
-      <footer className="mt-12 text-center relative z-10">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#11131E] border border-white/5 text-[11px] text-slate-400 hover:text-white transition-colors"
+      {/* Powered by ClearpathQR Footer logo */}
+      <footer className="mt-8 text-center relative z-10">
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            handleGoToLanding();
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#11131E] border border-white/5 text-[11px] text-slate-400 hover:text-white transition-colors cursor-pointer"
         >
           <span>Created with</span>
           <Logo to="/" size="sm" />
-        </Link>
+        </a>
       </footer>
     </div>
   );
