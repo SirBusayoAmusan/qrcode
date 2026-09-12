@@ -53,29 +53,29 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
   return (
     <div className="min-h-screen bg-[#090A0F] text-slate-100 flex flex-col md:flex-row">
-      {/* Top Mobile Bar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0F111A] border-b border-white/5 sticky top-0 z-40">
+      {/* Top Mobile Bar (Apple-style frosted glass) */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#07080D]/90 backdrop-blur-xl border-b border-white/[0.08] sticky top-0 z-40">
         <Logo to="/" size="sm" />
         
         <div className="flex items-center gap-2">
           {activeChannel && (
-            <div className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-full border border-white/10">
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-white/[0.04] rounded-full border border-white/[0.08]">
               <img 
                 src={activeChannel.avatar_url || '/assets/youtube-creator-male.png'} 
                 alt={activeChannel.name}
                 className="w-5 h-5 rounded-full object-cover" 
               />
-              <span className="text-xs font-medium text-slate-200 max-w-[90px] truncate">
+              <span className="text-xs font-medium text-slate-200 max-w-[100px] truncate">
                 {activeChannel.name}
               </span>
             </div>
           )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg bg-white/5 text-slate-200 hover:text-white hover:bg-white/10"
+            className="p-2 rounded-xl bg-white/[0.04] text-slate-200 hover:text-white hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer"
             aria-label="Toggle navigation drawer"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
       </header>

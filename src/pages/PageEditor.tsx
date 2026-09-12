@@ -52,7 +52,6 @@ export const PageEditor: React.FC = () => {
     if (existingPage?.product_links && existingPage.product_links.length > 0) {
       return existingPage.product_links;
     }
-    // Fallback migration from cta_buttons if editing legacy page
     if (existingPage?.cta_buttons && existingPage.cta_buttons.length > 0) {
       return existingPage.cta_buttons.map(b => ({ id: b.id, title: b.label, url: b.url }));
     }
@@ -119,10 +118,8 @@ export const PageEditor: React.FC = () => {
     setSlug(generateUniqueSlug(allSlugs));
   };
 
-  // Derive title from headline or campaign
   const computedTitle = headline.trim() || campaignName.trim() || 'My Video Resource Page';
 
-  // Construct preview page
   const previewPage: TapframePage = {
     id: existingPage?.id || 'temp-id',
     channel_id: activeChannel?.id || 'ch-1',
@@ -227,44 +224,43 @@ export const PageEditor: React.FC = () => {
   const primaryProduct = productLinks[0];
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      {/* Top action header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+      {/* Top action header (Clean Apple Minimalist) */}
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/dashboard"
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+            className="p-2.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-colors shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-violet-400">
+          <div className="min-w-0">
+            <span className="text-[10px] uppercase font-bold tracking-widest text-violet-400 block truncate">
               {isEditing ? 'Edit QR Tapframe' : 'Create New QR Tapframe'}
             </span>
-            <h1 className="text-xl sm:text-2xl font-black text-white">
+            <h1 className="text-lg sm:text-2xl font-black text-white truncate">
               {headline || computedTitle}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-violet-600/30 flex items-center gap-2 transition-all hover:scale-105 cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? 'Saving...' : 'Save & Publish QR'}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 sm:px-6 py-2.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-xl shadow-violet-600/25 flex items-center gap-2 transition-all hover:scale-105 active:scale-[0.98] shrink-0 cursor-pointer"
+        >
+          <Save className="w-4 h-4" />
+          <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save & Publish QR'}</span>
+          <span className="sm:hidden">{saving ? 'Saving...' : 'Save'}</span>
+        </button>
       </div>
 
       {isBlockedByFreeLimit && (
-        <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex items-center justify-between gap-3">
+        <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-rose-400 shrink-0" />
-            <span><strong>Free Tier Limit (1 Tapframe):</strong> You already have 1 active QR link. Upgrade to Pro to create unlimited pages.</span>
+            <span><strong>Free Tier Limit (1 Tapframe):</strong> You have 1 active QR link. Upgrade to Pro for unlimited pages.</span>
           </div>
           <button 
             type="button"
@@ -275,7 +271,7 @@ export const PageEditor: React.FC = () => {
               });
               setShowPaywallModal(true);
             }}
-            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs whitespace-nowrap cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs whitespace-nowrap cursor-pointer self-start sm:self-auto"
           >
             Upgrade to Pro
           </button>
@@ -283,19 +279,19 @@ export const PageEditor: React.FC = () => {
       )}
 
       {errorMessage && (
-        <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+        <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Main 2-Column Clean Builder */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Main 2-Column Responsive Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Left Form Editor */}
         <div className="lg:col-span-7 space-y-6">
           <form onSubmit={handleSave} className="space-y-6">
             {/* 1. Core Page & Guaranteed Unique URL */}
-            <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-4">
+            <div className="p-5 sm:p-6 rounded-3xl bg-[#10121E] border border-white/[0.08] space-y-4 shadow-xl">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
                 <Layers className="w-4 h-4" />
                 <span>1. Core Page & Guaranteed Unique URL</span>
@@ -303,19 +299,19 @@ export const PageEditor: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Campaign Name (For Leads grouping)</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Campaign Name (For Leads grouping)</label>
                   <input
                     type="text"
                     value={campaignName}
                     onChange={(e) => setCampaignName(e.target.value)}
                     placeholder="e.g. YouTube: Six Figure Wealth"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Autogenerated Unique Slug</label>
+                    <label className="text-xs font-medium text-slate-300">Autogenerated Unique Slug</label>
                     <button
                       type="button"
                       onClick={handleRegenerateSlug}
@@ -326,14 +322,14 @@ export const PageEditor: React.FC = () => {
                       <span>Regenerate</span>
                     </button>
                   </div>
-                  <div className="flex items-center rounded-xl bg-[#0B0D15] border border-white/10 px-3">
+                  <div className="flex items-center rounded-2xl bg-[#090A12] border border-white/[0.08] px-3">
                     <span className="text-xs text-slate-500 font-mono">qr.clearpath.click/q/</span>
                     <input
                       type="text"
                       required
                       readOnly
                       value={slug}
-                      className="w-full py-2.5 pl-1 bg-transparent text-emerald-400 text-sm font-mono focus:outline-none cursor-default font-bold"
+                      className="w-full py-2.5 pl-1 bg-transparent text-emerald-400 text-xs sm:text-sm font-mono focus:outline-none cursor-default font-bold"
                     />
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">Unique collision-resistant URL slug guaranteed for this QR code.</p>
@@ -342,7 +338,7 @@ export const PageEditor: React.FC = () => {
             </div>
 
             {/* 2. Streamlined Mobile Landing Page Builder */}
-            <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-5">
+            <div className="p-5 sm:p-6 rounded-3xl bg-[#10121E] border border-white/[0.08] space-y-4 sm:space-y-5 shadow-xl">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
                 <Smartphone className="w-4 h-4" />
                 <span>2. Mobile Page Content</span>
@@ -350,42 +346,43 @@ export const PageEditor: React.FC = () => {
 
               {/* Badge / Callout Ribbon */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Badge / Callout Ribbon</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">Badge / Callout Ribbon</label>
                 <input
                   type="text"
                   value={badgeText}
                   onChange={(e) => setBadgeText(e.target.value)}
                   placeholder="e.g. Get the Free Package Below"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
               {/* Main Headline */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Main Headline</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">Main Headline *</label>
                 <input
                   type="text"
+                  required
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   placeholder="e.g. The Six Figure Wealth Guide"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-semibold placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm font-semibold placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
               {/* Subheadline / Description */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Subheadline / Description</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">Subheadline / Description</label>
                 <textarea
                   rows={2}
                   value={subheadline}
                   onChange={(e) => setSubheadline(e.target.value)}
                   placeholder="e.g. Drop your email below to get the free downloadable guide and resources."
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
               {/* Product Destination Links Section */}
-              <div className="p-4 rounded-xl bg-[#0B0D15] border border-white/5 space-y-3">
+              <div className="p-4 rounded-2xl bg-[#090A12] border border-white/[0.08] space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -400,7 +397,7 @@ export const PageEditor: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddProductLink}
-                    className="px-3 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-violet-600/25 hover:bg-violet-600/35 border border-violet-500/35 text-violet-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Link</span>
@@ -408,13 +405,13 @@ export const PageEditor: React.FC = () => {
                 </div>
 
                 {productLinks.length === 0 ? (
-                  <div className="p-3 text-center text-xs text-slate-500 border border-dashed border-white/10 rounded-xl">
+                  <div className="p-3.5 text-center text-xs text-slate-500 border border-dashed border-white/10 rounded-2xl">
                     No product link added. Click "+ Add Link" to set the destination URL where visitors are sent after clicking Get Access.
                   </div>
                 ) : (
                   <div className="space-y-3 pt-1">
                     {productLinks.map((link, idx) => (
-                      <div key={link.id || idx} className="p-3 rounded-xl bg-[#11131E] border border-white/10 space-y-2 relative">
+                      <div key={link.id || idx} className="p-3.5 rounded-2xl bg-[#10121E] border border-white/[0.08] space-y-2.5 relative">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-violet-300">
                             {idx === 0 ? 'Primary Destination Link #1' : `Product Link #${idx + 1}`}
@@ -435,7 +432,7 @@ export const PageEditor: React.FC = () => {
                             value={link.title}
                             onChange={(e) => handleUpdateProductLink(idx, 'title', e.target.value)}
                             placeholder="Name of the product (e.g. Notion Business Template)"
-                            className="w-full px-3 py-1.5 rounded-lg bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                            className="w-full px-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                           />
                         </div>
 
@@ -445,7 +442,7 @@ export const PageEditor: React.FC = () => {
                             value={link.url}
                             onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
                             placeholder="Destination URL (e.g. https://creator.gumroad.com/l/...)"
-                            className="w-full px-3 py-1.5 rounded-lg bg-[#0B0D15] border border-white/10 text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                            className="w-full px-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                           />
                         </div>
                       </div>
@@ -455,7 +452,7 @@ export const PageEditor: React.FC = () => {
               </div>
 
               {/* Enable Email Lead Capture with Field Selection */}
-              <div className="p-4 rounded-xl bg-[#0B0D15] border border-white/5 space-y-4">
+              <div className="p-4 rounded-2xl bg-[#090A12] border border-white/[0.08] space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold text-white">Enable Email Lead Capture</div>
@@ -470,14 +467,14 @@ export const PageEditor: React.FC = () => {
                 </div>
 
                 {leadCaptureEnabled && (
-                  <div className="space-y-4 pt-3 border-t border-white/5">
+                  <div className="space-y-4 pt-3 border-t border-white/[0.06]">
                     {/* Form Fields to Collect */}
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                         Select Visitor Details to Collect:
                       </label>
                       <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="p-2.5 rounded-lg bg-[#11131E] border border-violet-500/30 text-white flex items-center gap-2">
+                        <div className="p-2.5 rounded-xl bg-[#10121E] border border-violet-500/30 text-white flex items-center gap-2">
                           <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
                           <span className="font-semibold text-xs">Email</span>
                         </div>
@@ -485,10 +482,10 @@ export const PageEditor: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setCollectName(!collectName)}
-                          className={`p-2.5 rounded-lg border flex items-center gap-2 text-xs cursor-pointer transition-all ${
+                          className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs cursor-pointer transition-all ${
                             collectName
                               ? 'bg-violet-600/20 border-violet-500 text-white'
-                              : 'bg-[#11131E] border-white/10 text-slate-400 hover:text-white'
+                              : 'bg-[#10121E] border-white/[0.08] text-slate-400 hover:text-white'
                           }`}
                         >
                           {collectName ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
@@ -498,10 +495,10 @@ export const PageEditor: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setCollectPhone(!collectPhone)}
-                          className={`p-2.5 rounded-lg border flex items-center gap-2 text-xs cursor-pointer transition-all ${
+                          className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs cursor-pointer transition-all ${
                             collectPhone
                               ? 'bg-violet-600/20 border-violet-500 text-white'
-                              : 'bg-[#11131E] border-white/10 text-slate-400 hover:text-white'
+                              : 'bg-[#10121E] border-white/[0.08] text-slate-400 hover:text-white'
                           }`}
                         >
                           {collectPhone ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
@@ -512,40 +509,52 @@ export const PageEditor: React.FC = () => {
 
                     {/* Lead Magnet Title */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">Lead Magnet / Asset Title</label>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Lead Magnet / Asset Title</label>
                       <input
                         type="text"
                         value={leadMagnetTitle}
                         onChange={(e) => setLeadMagnetTitle(e.target.value)}
                         placeholder="e.g. Free Strategy Guide & Template"
-                        className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                        className="w-full px-3 py-2 rounded-xl bg-[#10121E] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                       />
                     </div>
 
                     {/* Submit Button CTA Text */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">Submit Button CTA Text</label>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Submit Button CTA Text</label>
                       <input
                         type="text"
                         value={leadCaptureButtonText}
                         onChange={(e) => setLeadCaptureButtonText(e.target.value)}
                         placeholder="e.g. Get Access"
-                        className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                        className="w-full px-3 py-2 rounded-xl bg-[#10121E] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                       />
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Secondary Primary Action Button Underneath Form as requested! */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-violet-600/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Publishing Tapframe...' : 'Save & Publish QR Tapframe'}</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>
 
-        {/* Right Sticky Preview with Transparent Mascot */}
+        {/* Right Sticky Preview */}
         <div className="lg:col-span-5 sticky top-20 space-y-4">
-          <div className="flex bg-[#11131E] p-1 rounded-xl border border-white/5">
+          <div className="flex bg-[#10121E] p-1 rounded-2xl border border-white/[0.08]">
             <button
               onClick={() => setPreviewTab('mobile')}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 previewTab === 'mobile' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -554,7 +563,7 @@ export const PageEditor: React.FC = () => {
             </button>
             <button
               onClick={() => setPreviewTab('qr')}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 previewTab === 'qr' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -563,7 +572,7 @@ export const PageEditor: React.FC = () => {
             </button>
           </div>
 
-          <div className="p-4 rounded-3xl bg-[#11131E] border border-white/10 flex flex-col items-center justify-center relative">
+          <div className="p-4 rounded-3xl bg-[#10121E] border border-white/[0.08] flex flex-col items-center justify-center relative">
             <div className="mb-2">
               <Mascot 
                 mood="curious" 
@@ -574,9 +583,9 @@ export const PageEditor: React.FC = () => {
             </div>
 
             {previewTab === 'mobile' ? (
-              <div className="w-full max-w-[320px] rounded-[36px] bg-[#090A0F] border-4 border-slate-700 shadow-2xl overflow-hidden p-4 text-center relative">
+              <div className="w-full max-w-[320px] rounded-[36px] bg-[#07080D] border-4 border-slate-700 shadow-2xl overflow-hidden p-4 text-center relative">
                 {/* 1. Channel Header */}
-                <div className="flex items-center justify-center gap-2 mb-3 pb-2 border-b border-white/5">
+                <div className="flex items-center justify-center gap-2 mb-3 pb-2 border-b border-white/[0.08]">
                   {activeChannel?.avatar_url && (
                     <img
                       src={activeChannel.avatar_url}
@@ -603,9 +612,9 @@ export const PageEditor: React.FC = () => {
                   {subheadline || 'Drop your email below to get the free downloadable guide and resources.'}
                 </p>
 
-                {/* 4. Lead Capture Form (Name, Email, Phone + [Get Access] button) */}
+                {/* 4. Lead Capture Form */}
                 {leadCaptureEnabled ? (
-                  <div className="p-3.5 rounded-2xl bg-white/5 border border-violet-500/30 mb-3 space-y-2.5 text-left shadow-lg">
+                  <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-violet-500/30 mb-3 space-y-2.5 text-left shadow-lg">
                     <div className="text-[10px] font-bold text-violet-300 flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-violet-400" />
                       <span>{leadMagnetTitle || 'Free Strategy Guide & Template'}</span>
@@ -616,7 +625,7 @@ export const PageEditor: React.FC = () => {
                         type="text"
                         disabled
                         placeholder="Your full name..."
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 text-[11px] text-slate-400 border border-white/5"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 text-[11px] text-slate-400 border border-white/[0.08]"
                       />
                     )}
 
@@ -624,7 +633,7 @@ export const PageEditor: React.FC = () => {
                       type="email"
                       disabled
                       placeholder="Your email address..."
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 text-[11px] text-slate-400 border border-white/5"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 text-[11px] text-slate-400 border border-white/[0.08]"
                     />
 
                     {collectPhone && (
@@ -632,14 +641,14 @@ export const PageEditor: React.FC = () => {
                         type="tel"
                         disabled
                         placeholder="Your phone number..."
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 text-[11px] text-slate-400 border border-white/5"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 text-[11px] text-slate-400 border border-white/[0.08]"
                       />
                     )}
 
                     <button
                       type="button"
                       disabled
-                      className="w-full py-2.5 rounded-xl bg-violet-600 text-white font-bold text-xs shadow-md shadow-violet-600/30 flex items-center justify-center gap-1.5"
+                      className="w-full py-2.5 rounded-2xl bg-violet-600 text-white font-bold text-xs shadow-md shadow-violet-600/30 flex items-center justify-center gap-1.5"
                     >
                       <span>{leadCaptureButtonText || 'Get Access'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -653,13 +662,12 @@ export const PageEditor: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  /* If lead capture is turned off, show direct product buttons */
                   productLinks.length > 0 && (
                     <div className="space-y-1.5 mb-3">
                       {productLinks.map((link, i) => (
                         <div
                           key={i}
-                          className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-semibold text-slate-200 flex items-center justify-between shadow-sm"
+                          className="py-2.5 px-3 rounded-2xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.08] text-xs font-semibold text-slate-200 flex items-center justify-between shadow-sm"
                         >
                           <span className="truncate">{link.title || `Product Link #${i + 1}`}</span>
                           <ExternalLink className="w-3.5 h-3.5 text-violet-400 shrink-0" />
@@ -669,7 +677,7 @@ export const PageEditor: React.FC = () => {
                   )
                 )}
 
-                <div className="mt-4 pt-3 border-t border-white/5 text-[9px] text-slate-500">
+                <div className="mt-4 pt-3 border-t border-white/[0.08] text-[9px] text-slate-500">
                   Powered by ClearpathQR
                 </div>
               </div>
