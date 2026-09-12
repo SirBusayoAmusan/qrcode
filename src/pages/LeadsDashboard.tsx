@@ -7,7 +7,8 @@ import {
   Smartphone, 
   Layers,
   Users,
-  QrCode
+  QrCode,
+  Phone
 } from 'lucide-react';
 import { Mascot } from '../components/Mascot';
 import { Link } from 'react-router-dom';
@@ -26,6 +27,7 @@ export const LeadsDashboard: React.FC = () => {
     const matchesSearch = 
       lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (lead.name && lead.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (lead.phone && lead.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
       lead.country.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCampaign = selectedCampaign === 'all' ? true : lead.campaign_name === selectedCampaign;
@@ -52,11 +54,12 @@ export const LeadsDashboard: React.FC = () => {
       });
     } catch (e) {}
 
-    const headers = ['ID', 'Email', 'Name', 'Page Title', 'Campaign Name', 'Source', 'Referrer', 'Country', 'Device', 'Date'];
+    const headers = ['ID', 'Email', 'Name', 'Phone', 'Page Title', 'Campaign Name', 'Source', 'Referrer', 'Country', 'Device', 'Date'];
     const rows = filteredLeads.map(l => [
       l.id,
       `"${l.email}"`,
       `"${l.name || ''}"`,
+      `"${l.phone || ''}"`,
       `"${l.page_title}"`,
       `"${l.campaign_name || ''}"`,
       `"${l.source}"`,
@@ -100,7 +103,7 @@ export const LeadsDashboard: React.FC = () => {
               Captured Leads & Audiences
             </h1>
             <p className="text-xs text-slate-300 mt-1 max-w-lg">
-              Every viewer who entered their email across your active video Tapframes.
+              Every viewer who entered their details across your active video Tapframes.
             </p>
           </div>
         </div>
@@ -124,7 +127,7 @@ export const LeadsDashboard: React.FC = () => {
           </div>
           <h3 className="text-lg font-bold text-white mb-1">No leads captured yet</h3>
           <p className="text-sm text-slate-400 max-w-sm mb-6">
-            When viewers scan your QR codes and fill out the lead magnet form, their emails and locations will appear here in real time.
+            When viewers scan your QR codes and fill out the lead magnet form, their contact info and locations will appear here in real time.
           </p>
           <Link
             to="/dashboard"
@@ -183,7 +186,7 @@ export const LeadsDashboard: React.FC = () => {
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
               <input
                 type="text"
-                placeholder="Search by email, name, country..."
+                placeholder="Search by email, name, phone, country..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#11131E] border border-white/5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
@@ -201,7 +204,7 @@ export const LeadsDashboard: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="bg-white/[0.02] border-b border-white/5 text-slate-400 font-semibold uppercase tracking-wider">
                   <tr>
-                    <th className="py-3.5 px-4">Contact / Email</th>
+                    <th className="py-3.5 px-4">Contact / Lead</th>
                     <th className="py-3.5 px-4">Campaign Group</th>
                     <th className="py-3.5 px-4">Page Title</th>
                     <th className="py-3.5 px-4">Location</th>
@@ -220,6 +223,12 @@ export const LeadsDashboard: React.FC = () => {
                           <div>
                             <div className="font-semibold text-white">{lead.name || 'Anonymous Viewer'}</div>
                             <div className="text-slate-400 font-mono text-[11px]">{lead.email}</div>
+                            {lead.phone && (
+                              <div className="text-violet-400/80 font-mono text-[10px] flex items-center gap-1 mt-0.5">
+                                <Phone className="w-2.5 h-2.5" />
+                                <span>{lead.phone}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>

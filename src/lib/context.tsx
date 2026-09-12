@@ -206,6 +206,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       subheadline: pageData.subheadline || 'Drop your email below to get the free downloadable guide and resources.',
       badge_text: pageData.badge_text || '✨ Exclusive Viewer Offer',
       hero_image_url: pageData.hero_image_url || '',
+      product_links: pageData.product_links || [],
+      lead_capture_fields: pageData.lead_capture_fields || {
+        collect_email: true,
+        collect_name: false,
+        collect_phone: false,
+      },
       lead_capture_enabled: pageData.lead_capture_enabled !== undefined ? pageData.lead_capture_enabled : true,
       lead_capture_placeholder: pageData.lead_capture_placeholder || 'Enter your email address...',
       lead_capture_button_text: pageData.lead_capture_button_text || 'Get Instant Access',

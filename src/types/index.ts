@@ -12,6 +12,12 @@ export interface Channel {
   created_at: string;
 }
 
+export interface ProductLink {
+  id: string;
+  title: string;
+  url: string;
+}
+
 export interface TapframePage {
   id: string;
   channel_id: string;
@@ -28,28 +34,40 @@ export interface TapframePage {
   destination_type: 'landing_page' | 'external_url';
   external_url?: string;
   status: 'active' | 'archived' | 'draft';
-  // Landing page builder fields
+  
+  // Streamlined Landing Page Builder Fields
+  badge_text?: string;
   headline: string;
   subheadline: string;
-  badge_text?: string;
-  hero_image_url?: string;
+  
+  // Product links (Free tier: max 1 link, Pro tier: unlimited)
+  product_links: ProductLink[];
+  
+  // Email & Lead Capture Setup
   lead_capture_enabled: boolean;
-  lead_capture_placeholder?: string;
-  lead_capture_button_text?: string;
+  lead_capture_fields?: {
+    collect_email: boolean;
+    collect_name: boolean;
+    collect_phone: boolean;
+  };
   lead_magnet_title?: string;
+  lead_capture_button_text?: string;
   lead_magnet_download_url?: string;
-  cta_buttons: Array<{
+
+  // Legacy fallback support
+  cta_buttons?: Array<{
     id: string;
     label: string;
     url: string;
-    variant: 'primary' | 'secondary' | 'outline';
-    icon?: string;
+    variant?: 'primary' | 'secondary' | 'outline';
   }>;
-  social_links: Array<{
+  hero_image_url?: string;
+  lead_capture_placeholder?: string;
+  social_links?: Array<{
     platform: 'youtube' | 'twitter' | 'instagram' | 'spotify' | 'tiktok' | 'website';
     url: string;
   }>;
-  custom_theme: {
+  custom_theme?: {
     background_color: string;
     accent_color: string;
     text_color: string;
@@ -61,7 +79,8 @@ export interface TapframePage {
       callout_text?: string;
     };
   };
-  // Analytics aggregate
+
+  // Real-time Analytics Aggregate
   total_scans: number;
   unique_visitors: number;
   total_clicks: number;
@@ -78,22 +97,13 @@ export interface Lead {
   channel_id: string;
   email: string;
   name?: string;
+  phone?: string;
   source: string;
   referrer?: string;
   device: 'mobile' | 'desktop' | 'tablet';
   country: string;
   city?: string;
   created_at: string;
-}
-
-export interface ScanEvent {
-  id: string;
-  page_id: string;
-  timestamp: string;
-  device: 'iPhone' | 'Android' | 'Desktop' | 'iPad';
-  browser: 'Safari' | 'Chrome' | 'Firefox';
-  country: string;
-  converted: boolean;
 }
 
 export interface UserProfile {

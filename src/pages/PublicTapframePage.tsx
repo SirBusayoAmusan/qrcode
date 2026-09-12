@@ -9,6 +9,8 @@ import {
   Sparkles, 
   ArrowRight, 
   Mail, 
+  User,
+  Phone,
   Tv, 
   Lock
 } from 'lucide-react';
@@ -26,14 +28,16 @@ export const PublicTapframePage: React.FC = () => {
   const [loadingPage, setLoadingPage] = useState(true);
 
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // 1. Try to find page from app context
+  // 1. Try to find page from memory
   const localPage = pages.find(p => p.slug === slug || p.id === slug);
   const localChannel = channels.find(c => c.id === localPage?.channel_id);
 
-  // 2. If not found in memory (e.g. viewer is scanning on their personal phone), fetch directly from Supabase
+  // 2. If not found in memory (e.g. viewer is scanning on their mobile device), fetch from Supabase
   useEffect(() => {
     let isMounted = true;
 
@@ -92,7 +96,7 @@ export const PublicTapframePage: React.FC = () => {
     created_at: new Date().toISOString()
   };
 
-  // If destination is external URL, redirect immediately
+  // If destination is direct external URL, redirect immediately
   useEffect(() => {
     if (page && page.destination_type === 'external_url' && page.external_url) {
       const timer = setTimeout(() => {
@@ -117,7 +121,7 @@ export const PublicTapframePage: React.FC = () => {
         <Logo to="/" size="md" className="mb-4" />
         <h2 className="text-xl font-bold mb-2">Offer Not Found</h2>
         <p className="text-xs text-slate-400 mb-6 max-w-sm">
-          This dynamic QR link (/q/{slug}) does not exist or may have been archived by the creator.
+          This dynamic QR link (/q/{slug}) does not exist or may have been updated.
         </p>
         <Link to="/" className="px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-semibold">
           Visit ClearpathQR
@@ -145,27 +149,32 @@ export const PublicTapframePage: React.FC = () => {
     );
   }
 
+  const collectName = page.lead_capture_fields?.collect_name ?? false;
+  const collectPhone = page.lead_capture_fields?.collect_phone ?? false;
+  const productLinks = page.product_links || [];
+
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email.trim()) return;
 
     setSubmitting(true);
     try {
-      // 1. Record lead locally in app context
       await addLead({
         page_id: page.id,
         page_title: page.title,
         campaign_name: page.campaign_name || 'General Campaign',
         channel_id: channel.id,
         email: email.trim(),
+        name: name.trim() || undefined,
+        phone: phone.trim() || undefined,
         source: 'Mobile QR Scan',
-        referrer: 'Living Room TV Scan',
+        referrer: 'TV / Video Stream',
         device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : /Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
         country: 'Global Viewer',
         city: 'Mobile User',
       });
 
-      // 2. Also record directly to Supabase public leads table if enabled
+      // Also record directly to Supabase public leads table if exists
       try {
         await supabase
           .from('leads')
@@ -175,8 +184,9 @@ export const PublicTapframePage: React.FC = () => {
             campaign_name: page.campaign_name || 'General Campaign',
             channel_id: channel.id,
             email: email.trim(),
+            name: name.trim() || null,
             source: 'Mobile QR Scan',
-            referrer: 'TV / Video Stream',
+            referrer: 'TV Screen',
             device: 'mobile',
             country: 'Global Viewer',
           });
@@ -200,7 +210,7 @@ export const PublicTapframePage: React.FC = () => {
     }
   };
 
-  const handleButtonClick = (url: string) => {
+  const handleLinkClick = (url: string) => {
     recordClick(page.id);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -212,7 +222,7 @@ export const PublicTapframePage: React.FC = () => {
 
       {/* Main Mobile-First Container */}
       <div className="w-full max-w-md mx-auto relative z-10 flex flex-col items-center text-center">
-        {/* Creator Channel Header — Logo shows automatically */}
+        {/* Creator Channel Header */}
         <div className="w-full flex items-center justify-between pb-4 mb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             {channel.avatar_url && (
@@ -242,7 +252,7 @@ export const PublicTapframePage: React.FC = () => {
             mood={submitted ? 'celebrate' : 'wave'} 
             size="xs" 
             badge="Scan Connected!"
-            message={submitted ? "Yay! Resource download unlocked below! 🎉" : "Welcome! Drop your email below for instant access."} 
+            message={submitted ? "Yay! Resource download unlocked below! 🎉" : "Welcome! Drop your details below for instant access."} 
           />
         </div>
 
@@ -288,6 +298,22 @@ export const PublicTapframePage: React.FC = () => {
                   <span>{page.lead_magnet_title || 'Free Download for Viewers'}</span>
                 </div>
 
+                {/* Name Field if enabled */}
+                {collectName && (
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your full name..."
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+                )}
+
+                {/* Email Field */}
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                   <input
@@ -295,10 +321,24 @@ export const PublicTapframePage: React.FC = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={page.lead_capture_placeholder || 'Enter your email address...'}
+                    placeholder="Your email address..."
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
                   />
                 </div>
+
+                {/* Phone Field if enabled */}
+                {collectPhone && (
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Your phone number / WhatsApp..."
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -328,7 +368,7 @@ export const PublicTapframePage: React.FC = () => {
                 <div>
                   <h3 className="text-base font-bold text-white">You're All Set! 🎉</h3>
                   <p className="text-xs text-slate-300 mt-1">
-                    Your request was received! Access details sent to <strong className="text-white">{email}</strong>.
+                    Your access details were sent to <strong className="text-white">{email}</strong>.
                   </p>
                 </div>
                 {page.lead_magnet_download_url && (
@@ -347,35 +387,18 @@ export const PublicTapframePage: React.FC = () => {
           </div>
         )}
 
-        {/* Custom Outbound CTA Links */}
-        {page.cta_buttons && page.cta_buttons.length > 0 && (
+        {/* Product Links */}
+        {productLinks.length > 0 && (
           <div className="w-full space-y-2.5 mb-6">
-            {page.cta_buttons.map((btn) => (
+            {productLinks.map((link) => (
               <button
-                key={btn.id}
-                onClick={() => handleButtonClick(btn.url)}
+                key={link.id}
+                onClick={() => handleLinkClick(link.url)}
                 className="w-full py-3.5 px-4 rounded-xl bg-[#121422] hover:bg-[#181B2D] border border-white/10 text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow transition-all hover:scale-[1.01] cursor-pointer"
               >
-                <span>{btn.label}</span>
+                <span>{link.title || 'View Resource'}</span>
                 <ExternalLink className="w-4 h-4 text-violet-400" />
               </button>
-            ))}
-          </div>
-        )}
-
-        {/* Social Links */}
-        {page.social_links && page.social_links.length > 0 && (
-          <div className="flex items-center justify-center gap-4 text-slate-400 text-xs pt-2">
-            {page.social_links.map((s, idx) => (
-              <a
-                key={idx}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="capitalize hover:text-white transition-colors"
-              >
-                {s.platform}
-              </a>
             ))}
           </div>
         )}
