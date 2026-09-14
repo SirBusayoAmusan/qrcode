@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../lib/context';
 import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { 
   QrCode, 
   Plus, 
@@ -16,11 +17,119 @@ import {
   CheckCircle2,
   Lock,
   Layers,
-  Zap
+  Zap,
+  Copy,
+  Check,
+  Database
 } from 'lucide-react';
 import type { TapframePage } from '../types';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 import { Mascot } from '../components/Mascot';
+
+const SQL_SETUP_SCRIPT = `-- =========================================================================
+-- ClearpathQR Complete Schema Setup (Pages, Workflows, Leads, Realtime)
+-- Run this in your Supabase SQL Editor: Dashboard -> SQL Editor
+-- =========================================================================
+
+-- 1. Create Public Pages Table (Stores every QR Tapframe page with public read access)
+create table if not exists public.pages (
+  id text primary key,
+  slug text unique not null,
+  user_id uuid,
+  channel_id text,
+  title text,
+  campaign_name text,
+  badge_text text,
+  headline text,
+  subheadline text,
+  product_links jsonb default '[]'::jsonb,
+  lead_capture_enabled boolean default true,
+  lead_capture_fields jsonb default '{"collect_email": true, "collect_name": false, "collect_phone": false}'::jsonb,
+  lead_magnet_title text,
+  lead_capture_button_text text,
+  associated_content jsonb,
+  channel_data jsonb,
+  total_scans integer default 0,
+  total_leads integer default 0,
+  total_clicks integer default 0,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+-- Enable RLS on Pages
+alter table public.pages enable row level security;
+
+-- Drop existing policies if any
+drop policy if exists "Public can read pages" on public.pages;
+drop policy if exists "Anyone can insert pages" on public.pages;
+drop policy if exists "Anyone can update pages" on public.pages;
+
+-- Allow anyone (including anonymous mobile scanners) to read pages by slug
+create policy "Public can read pages"
+on public.pages for select
+to anon, authenticated
+using (true);
+
+-- Allow inserting and updating pages
+create policy "Anyone can insert pages"
+on public.pages for insert
+to anon, authenticated
+with check (true);
+
+create policy "Anyone can update pages"
+on public.pages for update
+to anon, authenticated
+using (true)
+with check (true);
+
+-- 2. Create Leads Table
+create table if not exists public.leads (
+  id uuid primary key default gen_random_uuid(),
+  page_id text not null,
+  page_title text not null,
+  campaign_name text,
+  channel_id text,
+  email text not null,
+  name text,
+  phone text,
+  source text default 'Mobile QR Scan',
+  referrer text default 'TV Screen',
+  device text default 'mobile',
+  country text default 'Global Viewer',
+  city text,
+  created_at timestamptz default now() not null
+);
+
+alter table public.leads enable row level security;
+
+drop policy if exists "Public can submit leads via QR code" on public.leads;
+drop policy if exists "Authenticated users can read captured leads" on public.leads;
+
+create policy "Public can submit leads via QR code"
+on public.leads for insert to anon, authenticated
+with check (true);
+
+create policy "Authenticated users can read captured leads"
+on public.leads for select to authenticated
+using (true);
+
+-- 3. Safely Enable Realtime Replication
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pages'
+  ) then
+    alter publication supabase_realtime add table public.pages;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'leads'
+  ) then
+    alter publication supabase_realtime add table public.leads;
+  end if;
+end $$;`;
 
 export const VideoPagesDashboard: React.FC = () => {
   const { pages, activeChannel, deletePage, profile, canCreatePage } = useApp();
@@ -28,7 +137,27 @@ export const VideoPagesDashboard: React.FC = () => {
   const [filterTab, setFilterTab] = useState<'all' | 'active' | 'archived'>('all');
   const [selectedPreviewPage, setSelectedPreviewPage] = useState<TapframePage | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [dbSetupNeeded, setDbSetupNeeded] = useState(false);
   const navigate = useNavigate();
+
+  // Check if public.pages table exists in Supabase
+  useEffect(() => {
+    async function checkDb() {
+      try {
+        const { error } = await supabase.from('pages').select('id').limit(1);
+        if (error && (error.code === 'PGRST205' || (error.message && error.message.includes('Could not find the table')))) {
+          setDbSetupNeeded(true);
+        } else {
+          setDbSetupNeeded(false);
+        }
+      } catch (e) {
+        setDbSetupNeeded(true);
+      }
+    }
+    checkDb();
+  }, []);
 
   // Filter pages for active channel or all
   const channelPages = pages.filter(p => {
@@ -55,8 +184,33 @@ export const VideoPagesDashboard: React.FC = () => {
     }
   };
 
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SQL_SETUP_SCRIPT);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2500);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+      {/* Supabase Database Setup Banner if pages table is missing */}
+      {dbSetupNeeded && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
+          <div className="flex items-center gap-3">
+            <Database className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <strong className="text-white block sm:inline">Action Required for Mobile QR Scanning: </strong>
+              <span>Create the <code>public.pages</code> table in your Supabase SQL Editor so phones scanning your QR codes can view your offers.</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSqlModal(true)}
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs whitespace-nowrap cursor-pointer transition-all hover:scale-105 shrink-0 self-start sm:self-auto"
+          >
+            Copy SQL Setup Script
+          </button>
+        </div>
+      )}
+
       {/* Top Banner (Apple Minimalist Header) */}
       <div className="p-5 sm:p-7 rounded-3xl bg-gradient-to-r from-[#141226] via-[#101220] to-[#0E1428] border border-violet-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative overflow-hidden shadow-2xl">
         <div className="space-y-1.5 z-10 min-w-0 flex-1">
@@ -393,6 +547,62 @@ export const VideoPagesDashboard: React.FC = () => {
                 </div>
               </div>
             ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* SQL Setup Modal */}
+      {showSqlModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl p-6 sm:p-8 rounded-3xl bg-[#10121E] border border-violet-500/40 text-left space-y-4 animate-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Database className="w-5 h-5 text-violet-400" />
+                <h3 className="text-base sm:text-lg font-bold text-white">Supabase SQL Setup for Public QR Scans</h3>
+              </div>
+              <button
+                onClick={() => setShowSqlModal(false)}
+                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              To allow mobile phone cameras to scan and resolve your dynamic QR pages (like <code>/q/6ppurcf68</code>), paste and run this SQL script in your <strong>Supabase Dashboard → SQL Editor</strong>.
+            </p>
+
+            <div className="relative flex-1 min-h-0 bg-[#090A12] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-3.5 py-2 bg-white/[0.04] border-b border-white/10">
+                <span className="text-[11px] font-mono text-slate-400">supabase_setup.sql</span>
+                <button
+                  onClick={handleCopySql}
+                  className="px-3 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow"
+                >
+                  {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSql ? 'Copied!' : 'Copy Script'}</span>
+                </button>
+              </div>
+              <pre className="p-4 text-[11px] font-mono text-slate-300 overflow-y-auto select-all leading-relaxed flex-1">
+                {SQL_SETUP_SCRIPT}
+              </pre>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowSqlModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleCopySql}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-600/30"
+              >
+                {copiedSql ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedSql ? 'Copied to Clipboard!' : 'Copy SQL Script'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

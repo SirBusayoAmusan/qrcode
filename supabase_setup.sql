@@ -1,9 +1,48 @@
 -- =========================================================================
--- ClearpathQR Complete Schema Setup (Pages, Workflows, Leads, Realtime)
--- Run this in your Supabase SQL Editor: Dashboard -> SQL Editor
+-- ClearpathQR Complete & Combined Database Schema
+-- Safe to run in Supabase SQL Editor (Dashboard -> SQL Editor -> New Query)
+-- 100% idempotent: will NOT delete existing data or cause conflicts.
 -- =========================================================================
 
--- 1. Create Public Pages Table (Stores every QR Tapframe page with public read access)
+-- 1. Create Workflows Table (Stores user channels, settings, and workspace state)
+create table if not exists public.workflows (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  title text default 'ClearpathQR User Workflow',
+  current_step integer default 1,
+  data jsonb default '{}'::jsonb,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null,
+  constraint workflows_user_id_key unique (user_id)
+);
+
+-- Enable Row Level Security (RLS) on Workflows
+alter table public.workflows enable row level security;
+
+drop policy if exists "Users can view their own workflows" on public.workflows;
+drop policy if exists "Users can create their own workflows" on public.workflows;
+drop policy if exists "Users can update their own workflows" on public.workflows;
+drop policy if exists "Users can delete their own workflows" on public.workflows;
+drop policy if exists "Public can view workflows for resolution" on public.workflows;
+
+create policy "Users can view their own workflows"
+on public.workflows for select to authenticated
+using (auth.uid() = user_id);
+
+create policy "Users can create their own workflows"
+on public.workflows for insert to authenticated
+with check (auth.uid() = user_id);
+
+create policy "Users can update their own workflows"
+on public.workflows for update to authenticated
+using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can delete their own workflows"
+on public.workflows for delete to authenticated
+using (auth.uid() = user_id);
+
+
+-- 2. Create Public Pages Table (Stores every QR Tapframe page with public read access)
 create table if not exists public.pages (
   id text primary key,
   slug text unique not null,
@@ -31,18 +70,18 @@ create table if not exists public.pages (
 -- Enable RLS on Pages
 alter table public.pages enable row level security;
 
--- Drop existing policies if any
 drop policy if exists "Public can read pages" on public.pages;
 drop policy if exists "Anyone can insert pages" on public.pages;
 drop policy if exists "Anyone can update pages" on public.pages;
+drop policy if exists "Anyone can delete pages" on public.pages;
 
--- Allow anyone (including anonymous mobile scanners) to read pages by slug
+-- Allow anyone (including anonymous mobile phone scanners) to read pages by slug
 create policy "Public can read pages"
 on public.pages for select
 to anon, authenticated
 using (true);
 
--- Allow inserting and updating pages
+-- Allow inserting, updating, and deleting pages
 create policy "Anyone can insert pages"
 on public.pages for insert
 to anon, authenticated
@@ -54,47 +93,9 @@ to anon, authenticated
 using (true)
 with check (true);
 
-
--- 2. Create Workflows Table (Stores user channels, settings, and workspace state)
-create table if not exists public.workflows (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete cascade not null,
-  title text default 'ClearpathQR User Workflow',
-  current_step integer default 1,
-  data jsonb default '{}'::jsonb,
-  created_at timestamptz default now() not null,
-  updated_at timestamptz default now() not null,
-  constraint workflows_user_id_key unique (user_id)
-);
-
-alter table public.workflows enable row level security;
-
-drop policy if exists "Users can view their own workflows" on public.workflows;
-drop policy if exists "Users can create their own workflows" on public.workflows;
-drop policy if exists "Users can update their own workflows" on public.workflows;
-drop policy if exists "Users can delete their own workflows" on public.workflows;
-drop policy if exists "Public can view workflows for resolution" on public.workflows;
-
--- Allow creators to manage their own workflows
-create policy "Users can view their own workflows"
-on public.workflows for select to authenticated
-using (auth.uid() = user_id);
-
-create policy "Users can create their own workflows"
-on public.workflows for insert to authenticated
-with check (auth.uid() = user_id);
-
-create policy "Users can update their own workflows"
-on public.workflows for update to authenticated
-using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
-create policy "Users can delete their own workflows"
-on public.workflows for delete to authenticated
-using (auth.uid() = user_id);
-
--- Also allow anonymous public lookup on workflows as fallback for dynamic QR scans
-create policy "Public can view workflows for resolution"
-on public.workflows for select to anon
+create policy "Anyone can delete pages"
+on public.pages for delete
+to anon, authenticated
 using (true);
 
 
@@ -116,6 +117,7 @@ create table if not exists public.leads (
   created_at timestamptz default now() not null
 );
 
+-- Ensure phone column exists
 alter table public.leads add column if not exists phone text;
 
 alter table public.leads enable row level security;
@@ -132,21 +134,21 @@ on public.leads for select to authenticated
 using (true);
 
 
--- 4. Safely Enable Realtime Replication
+-- 4. Safely Enable Realtime Replication (Only adds if not already present)
 do $$
 begin
-  if not exists (
-    select 1 from pg_publication_tables 
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pages'
-  ) then
-    alter publication supabase_realtime add table public.pages;
-  end if;
-
   if not exists (
     select 1 from pg_publication_tables 
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'workflows'
   ) then
     alter publication supabase_realtime add table public.workflows;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pages'
+  ) then
+    alter publication supabase_realtime add table public.pages;
   end if;
 
   if not exists (
@@ -158,7 +160,7 @@ begin
 end $$;
 
 
--- 5. Auto updated_at triggers
+-- 5. Automatic updated_at timestamp triggers
 create or replace function public.handle_updated_at()
 returns trigger as $$
 begin
