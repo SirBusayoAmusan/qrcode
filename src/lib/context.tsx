@@ -36,12 +36,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Sync helpers to localStorage scoped by user id
-  const getStorageKey = (key: string, uid?: string) => {
-    const id = uid || user?.id || 'guest';
-    return `clearpath_${key}_${id}`;
-  };
-
+  // Local storage caching helpers scoped to user id
   const loadFromStorage = useCallback((uid: string) => {
     try {
       const savedChannels = localStorage.getItem(`clearpath_channels_${uid}`);
@@ -50,18 +45,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const savedPlan = localStorage.getItem(`clearpath_plan_${uid}`);
       const savedActiveChannel = localStorage.getItem(`clearpath_active_channel_${uid}`);
 
-      if (savedChannels) setChannels(JSON.parse(savedChannels));
-      else setChannels([]);
-
-      if (savedPages) setPages(JSON.parse(savedPages));
-      else setPages([]);
-
-      if (savedLeads) setLeads(JSON.parse(savedLeads));
-      else setLeads([]);
-
+      if (savedChannels) {
+        const parsed = JSON.parse(savedChannels);
+        if (Array.isArray(parsed) && parsed.length > 0) setChannels(parsed);
+      }
+      if (savedPages) {
+        const parsed = JSON.parse(savedPages);
+        if (Array.isArray(parsed)) setPages(parsed);
+      }
+      if (savedLeads) {
+        const parsed = JSON.parse(savedLeads);
+        if (Array.isArray(parsed)) setLeads(parsed);
+      }
       if (savedPlan === 'pro' || savedPlan === 'free') setUserPlan(savedPlan);
-      else setUserPlan('free');
-
       if (savedActiveChannel) setActiveChannelId(savedActiveChannel);
     } catch (e) {
       console.warn('Error reading scoped localStorage:', e);
@@ -85,7 +81,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeads([]);
     setUserPlan('free');
     setActiveChannelId('');
-    // Clear legacy un-scoped storage keys as well to prevent cross-account bleeding
     localStorage.removeItem('clearpath_channels_v2');
     localStorage.removeItem('clearpath_pages_v2');
     localStorage.removeItem('clearpath_leads_v2');
@@ -93,43 +88,149 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('clearpath_active_channel_id_v2');
   };
 
+  // Full 360 sync across workflows, public.pages, and public.leads
   const syncWithSupabase = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // 1. Check local storage first so UI is immediately warm
+      loadFromStorage(userId);
+
+      // 2. Fetch workflows table
+      const { data: wfData } = await supabase
         .from('workflows')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (!error && data && data.data) {
-        // Existing user with saved workflow in Supabase
-        const payload = data.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
-        const fetchedChannels = payload.channels || [];
-        const fetchedPages = payload.pages || [];
-        const fetchedLeads = payload.leads || [];
-        const fetchedPlan = payload.plan || 'free';
+      // 3. Fetch public.pages table (contains live real-time scan and lead counts!)
+      const { data: pagesRows } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('user_id', userId);
 
-        setChannels(fetchedChannels);
-        setPages(fetchedPages);
-        setLeads(fetchedLeads);
-        setUserPlan(fetchedPlan);
+      // 4. Fetch public.leads table (contains actual leads captured by external mobile scans!)
+      const { data: leadsRows } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (fetchedChannels.length > 0 && !activeChannelId) {
-          setActiveChannelId(fetchedChannels[0].id);
+      let mergedChannels: Channel[] = [];
+      let mergedPages: TapframePage[] = [];
+      let mergedLeads: Lead[] = [];
+      let plan: 'free' | 'pro' = 'free';
+
+      if (wfData && wfData.data) {
+        const payload = wfData.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
+        if (payload.channels && payload.channels.length > 0) mergedChannels = payload.channels;
+        if (payload.pages && payload.pages.length > 0) mergedPages = payload.pages;
+        if (payload.leads && payload.leads.length > 0) mergedLeads = payload.leads;
+        if (payload.plan) plan = payload.plan;
+      }
+
+      // If pages exist in public.pages, synchronize live stats & recover channel if needed
+      if (pagesRows && pagesRows.length > 0) {
+        const remotePagesMap = new Map<string, any>();
+        pagesRows.forEach(r => remotePagesMap.set(r.id, r));
+
+        // Merge or populate pages
+        if (mergedPages.length === 0) {
+          mergedPages = pagesRows.map(r => ({
+            id: r.id,
+            slug: r.slug,
+            user_id: r.user_id || userId,
+            channel_id: r.channel_id || 'ch-1',
+            title: r.title || 'Offer',
+            campaign_name: r.campaign_name || 'General',
+            badge_text: r.badge_text || '',
+            headline: r.headline || r.title,
+            subheadline: r.subheadline || '',
+            product_links: r.product_links || [],
+            lead_capture_enabled: r.lead_capture_enabled !== false,
+            lead_capture_fields: r.lead_capture_fields || { collect_email: true, collect_name: false, collect_phone: false },
+            lead_magnet_title: r.lead_magnet_title || 'Free Strategy Guide & Template',
+            lead_capture_button_text: r.lead_capture_button_text || 'Get Access',
+            total_scans: r.total_scans || 0,
+            unique_visitors: r.total_scans || 0,
+            total_leads: r.total_leads || 0,
+            total_clicks: r.total_clicks || 0,
+            destination_type: 'landing_page',
+            status: 'active',
+            created_at: r.created_at || new Date().toISOString(),
+            updated_at: r.updated_at || new Date().toISOString(),
+          }));
+        } else {
+          mergedPages = mergedPages.map(p => {
+            const remote = remotePagesMap.get(p.id);
+            if (remote) {
+              return {
+                ...p,
+                total_scans: Math.max(p.total_scans || 0, remote.total_scans || 0),
+                total_leads: Math.max(p.total_leads || 0, remote.total_leads || 0),
+                total_clicks: Math.max(p.total_clicks || 0, remote.total_clicks || 0),
+              };
+            }
+            return p;
+          });
         }
 
-        saveToStorage(userId, fetchedChannels, fetchedPages, fetchedLeads, fetchedPlan);
-      } else {
-        // Fresh user or deleted account: initialize completely clean state!
-        loadFromStorage(userId);
+        // Recover channel information from page channel_data if channels array was empty
+        if (mergedChannels.length === 0) {
+          for (const r of pagesRows) {
+            if (r.channel_data && r.channel_data.name) {
+              mergedChannels.push(r.channel_data);
+              break;
+            }
+          }
+        }
       }
+
+      // Merge real-time leads from public.leads table
+      if (leadsRows && leadsRows.length > 0) {
+        const userPageIds = new Set(mergedPages.map(p => p.id));
+        const userChannelIds = new Set(mergedChannels.map(c => c.id));
+
+        const relevantLeads: Lead[] = leadsRows
+          .filter(l => userPageIds.has(l.page_id) || userChannelIds.has(l.channel_id) || userPageIds.size === 0)
+          .map(l => ({
+            id: l.id,
+            page_id: l.page_id,
+            page_title: l.page_title,
+            campaign_name: l.campaign_name || 'General',
+            channel_id: l.channel_id,
+            email: l.email,
+            name: l.name || undefined,
+            phone: l.phone || undefined,
+            source: l.source || 'Mobile QR Scan',
+            referrer: l.referrer || 'TV Screen',
+            device: (l.device || 'mobile') as any,
+            country: l.country || 'Global Viewer',
+            city: l.city || undefined,
+            created_at: l.created_at,
+          }));
+
+        // Deduplicate leads by id/email+created_at
+        const leadMap = new Map<string, Lead>();
+        [...relevantLeads, ...mergedLeads].forEach(l => {
+          if (!leadMap.has(l.id)) leadMap.set(l.id, l);
+        });
+        mergedLeads = Array.from(leadMap.values());
+      }
+
+      if (mergedChannels.length > 0) {
+        setChannels(mergedChannels);
+        if (!activeChannelId) setActiveChannelId(mergedChannels[0].id);
+      }
+      setPages(mergedPages);
+      setLeads(mergedLeads);
+      setUserPlan(plan);
+
+      saveToStorage(userId, mergedChannels, mergedPages, mergedLeads, plan);
     } catch (err) {
-      console.warn('Supabase sync fallback to user-scoped local persistence:', err);
+      console.warn('Supabase sync notice:', err);
       loadFromStorage(userId);
     }
   };
 
-  // Handle Supabase Auth & Lifecycle
+  // Handle Supabase Auth & Realtime Subscriptions
   useEffect(() => {
     let mounted = true;
 
@@ -166,24 +267,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // Postgres Realtime Channel for live synchronization
+    // Realtime listener for instant lead arrivals & scan updates
     const realtimeChannel = supabase
-      .channel('clearpath-realtime-sync')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'workflows' },
-        (payload: any) => {
-          if (!mounted) return;
-          const newWorkflow = payload.new;
-          if (newWorkflow && newWorkflow.user_id === user?.id && newWorkflow.data) {
-            const data = newWorkflow.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
-            if (data.channels) setChannels(data.channels);
-            if (data.pages) setPages(data.pages);
-            if (data.leads) setLeads(data.leads);
-            if (data.plan) setUserPlan(data.plan);
-          }
-        }
-      )
+      .channel('clearpath-db-realtime')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'leads' },
@@ -195,6 +281,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               if (prev.some(l => l.id === newLead.id)) return prev;
               return [newLead, ...prev];
             });
+
+            // Increment page lead count
+            setPages(prev => prev.map(p => {
+              if (p.id === newLead.page_id) {
+                return { ...p, total_leads: (p.total_leads || 0) + 1 };
+              }
+              return p;
+            }));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'pages' },
+        (payload: any) => {
+          if (!mounted) return;
+          const updatedPage = payload.new;
+          if (updatedPage && updatedPage.id) {
+            setPages(prev => prev.map(p => {
+              if (p.id === updatedPage.id) {
+                return {
+                  ...p,
+                  total_scans: updatedPage.total_scans ?? p.total_scans,
+                  total_leads: updatedPage.total_leads ?? p.total_leads,
+                  total_clicks: updatedPage.total_clicks ?? p.total_clicks,
+                };
+              }
+              return p;
+            }));
           }
         }
       )
