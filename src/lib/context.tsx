@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Channel, TapframePage, Lead, UserProfile } from '../types';
 import { supabase } from './supabase';
 import type { User } from '@supabase/supabase-js';
@@ -29,50 +29,107 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [channels, setChannels] = useState<Channel[]>(() => {
-    const saved = localStorage.getItem('clearpath_channels_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [activeChannelId, setActiveChannelId] = useState<string>(() => {
-    return localStorage.getItem('clearpath_active_channel_id_v2') || '';
-  });
-  const [pages, setPages] = useState<TapframePage[]>(() => {
-    const saved = localStorage.getItem('clearpath_pages_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    const saved = localStorage.getItem('clearpath_leads_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [userPlan, setUserPlan] = useState<'free' | 'pro'>(() => {
-    return (localStorage.getItem('clearpath_user_plan') as 'free' | 'pro') || 'free';
-  });
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [activeChannelId, setActiveChannelId] = useState<string>('');
+  const [pages, setPages] = useState<TapframePage[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem('clearpath_channels_v2', JSON.stringify(channels));
-  }, [channels]);
+  // Sync helpers to localStorage scoped by user id
+  const getStorageKey = (key: string, uid?: string) => {
+    const id = uid || user?.id || 'guest';
+    return `clearpath_${key}_${id}`;
+  };
 
-  useEffect(() => {
-    localStorage.setItem('clearpath_pages_v2', JSON.stringify(pages));
-  }, [pages]);
+  const loadFromStorage = useCallback((uid: string) => {
+    try {
+      const savedChannels = localStorage.getItem(`clearpath_channels_${uid}`);
+      const savedPages = localStorage.getItem(`clearpath_pages_${uid}`);
+      const savedLeads = localStorage.getItem(`clearpath_leads_${uid}`);
+      const savedPlan = localStorage.getItem(`clearpath_plan_${uid}`);
+      const savedActiveChannel = localStorage.getItem(`clearpath_active_channel_${uid}`);
 
-  useEffect(() => {
-    localStorage.setItem('clearpath_leads_v2', JSON.stringify(leads));
-  }, [leads]);
+      if (savedChannels) setChannels(JSON.parse(savedChannels));
+      else setChannels([]);
 
-  useEffect(() => {
-    localStorage.setItem('clearpath_user_plan', userPlan);
-  }, [userPlan]);
+      if (savedPages) setPages(JSON.parse(savedPages));
+      else setPages([]);
 
-  useEffect(() => {
-    if (activeChannelId) {
-      localStorage.setItem('clearpath_active_channel_id_v2', activeChannelId);
+      if (savedLeads) setLeads(JSON.parse(savedLeads));
+      else setLeads([]);
+
+      if (savedPlan === 'pro' || savedPlan === 'free') setUserPlan(savedPlan);
+      else setUserPlan('free');
+
+      if (savedActiveChannel) setActiveChannelId(savedActiveChannel);
+    } catch (e) {
+      console.warn('Error reading scoped localStorage:', e);
     }
-  }, [activeChannelId]);
+  }, []);
 
-  // Handle Supabase Auth & Remote Sync
+  const saveToStorage = useCallback((uid: string, newChannels: Channel[], newPages: TapframePage[], newLeads: Lead[], plan: 'free' | 'pro') => {
+    try {
+      localStorage.setItem(`clearpath_channels_${uid}`, JSON.stringify(newChannels));
+      localStorage.setItem(`clearpath_pages_${uid}`, JSON.stringify(newPages));
+      localStorage.setItem(`clearpath_leads_${uid}`, JSON.stringify(newLeads));
+      localStorage.setItem(`clearpath_plan_${uid}`, plan);
+    } catch (e) {
+      console.warn('Error saving to scoped localStorage:', e);
+    }
+  }, []);
+
+  const clearAllUserData = () => {
+    setChannels([]);
+    setPages([]);
+    setLeads([]);
+    setUserPlan('free');
+    setActiveChannelId('');
+    // Clear legacy un-scoped storage keys as well to prevent cross-account bleeding
+    localStorage.removeItem('clearpath_channels_v2');
+    localStorage.removeItem('clearpath_pages_v2');
+    localStorage.removeItem('clearpath_leads_v2');
+    localStorage.removeItem('clearpath_user_plan');
+    localStorage.removeItem('clearpath_active_channel_id_v2');
+  };
+
+  const syncWithSupabase = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('workflows')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!error && data && data.data) {
+        // Existing user with saved workflow in Supabase
+        const payload = data.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
+        const fetchedChannels = payload.channels || [];
+        const fetchedPages = payload.pages || [];
+        const fetchedLeads = payload.leads || [];
+        const fetchedPlan = payload.plan || 'free';
+
+        setChannels(fetchedChannels);
+        setPages(fetchedPages);
+        setLeads(fetchedLeads);
+        setUserPlan(fetchedPlan);
+
+        if (fetchedChannels.length > 0 && !activeChannelId) {
+          setActiveChannelId(fetchedChannels[0].id);
+        }
+
+        saveToStorage(userId, fetchedChannels, fetchedPages, fetchedLeads, fetchedPlan);
+      } else {
+        // Fresh user or deleted account: initialize completely clean state!
+        loadFromStorage(userId);
+      }
+    } catch (err) {
+      console.warn('Supabase sync fallback to user-scoped local persistence:', err);
+      loadFromStorage(userId);
+    }
+  };
+
+  // Handle Supabase Auth & Lifecycle
   useEffect(() => {
     let mounted = true;
 
@@ -80,9 +137,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            await syncWithSupabase(session.user.id);
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
+          if (currentUser) {
+            await syncWithSupabase(currentUser.id);
+          } else {
+            clearAllUserData();
           }
         }
       } catch (err) {
@@ -94,16 +154,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await syncWithSupabase(session.user.id);
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      if (event === 'SIGNED_OUT' || !currentUser) {
+        clearAllUserData();
+      } else if (currentUser) {
+        await syncWithSupabase(currentUser.id);
       }
     });
 
-    // Setup Postgres Realtime Channels for live synchronization
+    // Postgres Realtime Channel for live synchronization
     const realtimeChannel = supabase
       .channel('clearpath-realtime-sync')
       .on(
@@ -112,7 +175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (payload: any) => {
           if (!mounted) return;
           const newWorkflow = payload.new;
-          if (newWorkflow && newWorkflow.data) {
+          if (newWorkflow && newWorkflow.user_id === user?.id && newWorkflow.data) {
             const data = newWorkflow.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
             if (data.channels) setChannels(data.channels);
             if (data.pages) setPages(data.pages);
@@ -144,29 +207,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  const syncWithSupabase = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('workflows')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (!error && data && data.data) {
-        const payload = data.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
-        if (payload.channels) setChannels(payload.channels);
-        if (payload.pages) setPages(payload.pages);
-        if (payload.leads) setLeads(payload.leads);
-        if (payload.plan) setUserPlan(payload.plan);
-      }
-    } catch (err) {
-      console.warn('Supabase sync skipped, using local persistence', err);
-    }
-  };
-
   const persistToRemote = async (newChannels: Channel[], newPages: TapframePage[], newLeads: Lead[], plan: 'free' | 'pro' = userPlan) => {
+    const currentUid = user?.id || 'guest';
+    saveToStorage(currentUid, newChannels, newPages, newLeads, plan);
+
     try {
-      // 1. If signed in, update workflow
+      // 1. If signed in, update workflow in Supabase
       if (user) {
         await supabase
           .from('workflows')
@@ -210,7 +256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
         } catch (pageErr) {
-          // Silent fallback if table not yet run
+          // Silent fallback
         }
       }
     } catch (err) {
@@ -222,6 +268,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setActiveChannel = (channel: Channel) => {
     setActiveChannelId(channel.id);
+    if (user?.id) {
+      localStorage.setItem(`clearpath_active_channel_${user.id}`, channel.id);
+    }
   };
 
   const upgradeToPro = () => {
@@ -229,8 +278,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persistToRemote(channels, pages, leads, 'pro');
   };
 
-  // Requirement: Free tier limit strictly to 1 active Tapframe
-  const canCreatePage = userPlan === 'pro' || pages.length < 1;
+  // Scoped to active channel pages (Never checks orphaned pages from other users or channels)
+  const activeChannelPages = pages.filter(p => {
+    if (!activeChannel) return true;
+    return p.channel_id === activeChannel.id;
+  });
+
+  // Requirement: Free tier limit strictly to 1 active Tapframe per active workspace
+  const canCreatePage = userPlan === 'pro' || activeChannelPages.length < 1;
 
   const createChannel = async (channelData: Omit<Channel, 'id' | 'user_id' | 'created_at'>): Promise<Channel> => {
     const newChan: Channel = {
@@ -253,7 +308,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createPage = async (pageData: Partial<TapframePage>): Promise<TapframePage> => {
-    // Check limit
     if (!canCreatePage) {
       throw new Error('FREE_TIER_LIMIT_REACHED');
     }
@@ -326,6 +380,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = pages.filter(p => p.id !== pageId);
     setPages(updated);
     await persistToRemote(channels, updated, leads);
+
+    // Also remove from Supabase public.pages
+    try {
+      await supabase.from('pages').delete().eq('id', pageId);
+    } catch (e) {}
   };
 
   const addLead = async (leadData: Omit<Lead, 'id' | 'created_at'>) => {
@@ -337,7 +396,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = [newLead, ...leads];
     setLeads(updated);
 
-    // Increment lead count on the corresponding page
     const updatedPages = pages.map(p => {
       if (p.id === leadData.page_id) {
         return { ...p, total_leads: (p.total_leads || 0) + 1 };

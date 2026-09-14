@@ -9,7 +9,9 @@ import {
   Tv, 
   Menu, 
   X, 
-  Sparkles
+  Sparkles,
+  Layers,
+  ChevronDown
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../lib/context';
@@ -21,7 +23,7 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { activeChannel, channels, setActiveChannel, user } = useApp();
+  const { activeChannel, channels, setActiveChannel, user, profile } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,11 +39,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   };
 
   const navItems = [
-    { name: 'Video pages', path: '/dashboard', icon: QrCode, exact: true },
+    { name: 'Video Pages & QR', path: '/dashboard', icon: QrCode, exact: true },
     { name: 'Leads & CRM', path: '/dashboard/leads', icon: Users },
     { name: 'Analytics', path: '/dashboard/analytics', icon: BarChart3 },
     { name: 'Channel Branding', path: '/dashboard/channel', icon: Tv },
-    { name: 'Plan & Billing', path: '/dashboard/plan', icon: Sparkles, badge: 'Free' },
+    { name: 'Plan & Billing', path: '/dashboard/plan', icon: Sparkles, badge: profile?.plan === 'pro' ? 'Pro' : 'Free' },
   ];
 
   const isNavActive = (item: typeof navItems[0]) => {
@@ -52,27 +54,32 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   };
 
   return (
-    <div className="min-h-screen bg-[#090A0F] text-slate-100 flex flex-col md:flex-row">
-      {/* Top Mobile Bar (Apple-style frosted glass) */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#07080D]/90 backdrop-blur-xl border-b border-white/[0.08] sticky top-0 z-40">
+    <div className="min-h-screen bg-[#08090E] text-slate-100 flex flex-col md:flex-row antialiased selection:bg-purple-500/30">
+      {/* Top Mobile Bar (Apple-style frosted glass with sleek, flowing layout) */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#08090E]/90 backdrop-blur-2xl border-b border-white/[0.08] sticky top-0 z-40">
         <Logo to="/" size="sm" />
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {activeChannel && (
-            <div className="flex items-center gap-2 px-2.5 py-1 bg-white/[0.04] rounded-full border border-white/[0.08]">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 bg-white/[0.04] hover:bg-white/[0.08] rounded-full border border-white/[0.08] transition-all cursor-pointer active:scale-95"
+            >
               <img 
-                src={activeChannel.avatar_url || '/assets/youtube-creator-male.png'} 
+                src={activeChannel.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'} 
                 alt={activeChannel.name}
-                className="w-5 h-5 rounded-full object-cover" 
+                className="w-5 h-5 rounded-full object-cover ring-1 ring-violet-500/50 shrink-0" 
               />
-              <span className="text-xs font-medium text-slate-200 max-w-[100px] truncate">
+              <span className="text-[11px] font-semibold text-slate-200 max-w-[120px] truncate">
                 {activeChannel.name}
               </span>
-            </div>
+              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+            </button>
           )}
+
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl bg-white/[0.04] text-slate-200 hover:text-white hover:bg-white/[0.08] border border-white/[0.06] transition-colors cursor-pointer"
+            className="p-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/[0.08] transition-all cursor-pointer active:scale-95 flex items-center justify-center"
             aria-label="Toggle navigation drawer"
           >
             {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -83,63 +90,63 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       {/* Mobile Drawer Backdrop */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation (Apple Minimalist Desktop & Mobile Drawer) */}
       <aside 
-        className={`fixed md:sticky top-0 left-0 bottom-0 z-50 w-72 bg-[#0F111A] border-r border-white/5 flex flex-col transition-transform duration-300 md:translate-x-0 h-screen ${
+        className={`fixed md:sticky top-0 left-0 bottom-0 z-50 w-72 bg-[#0C0E17] border-r border-white/[0.08] flex flex-col transition-transform duration-300 md:translate-x-0 h-screen ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Logo at Top */}
-        <div className="p-5 border-b border-white/5 flex items-center justify-between">
+        <div className="p-5 border-b border-white/[0.08] flex items-center justify-between">
           <Logo to="/" size="md" />
           <button 
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-1 text-slate-400 hover:text-white"
+            className="md:hidden p-2 rounded-xl bg-white/[0.04] text-slate-400 hover:text-white cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Active Channel Card with Logo */}
-        <div className="p-4 border-b border-white/5">
+        {/* Active Channel Card with Logo & Switcher */}
+        <div className="p-4 border-b border-white/[0.08]">
           <div className="relative">
             <div 
               onClick={() => setChannelDropdownOpen(!channelDropdownOpen)}
-              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 cursor-pointer transition-colors group"
+              className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] cursor-pointer transition-colors group"
             >
-              <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex items-center gap-3 overflow-hidden min-w-0">
                 <div className="relative shrink-0">
                   <img 
-                    src={activeChannel?.avatar_url || '/assets/youtube-creator-male.png'} 
+                    src={activeChannel?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'} 
                     alt={activeChannel?.name || 'Channel'} 
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-violet-500/30"
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-violet-500/40 shadow"
                   />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-red-600 rounded-full flex items-center justify-center border border-[#0F111A]">
-                    <Tv className="w-2 h-2 text-white" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-red-600 rounded-full flex items-center justify-center border-2 border-[#0C0E17]">
+                    <Tv className="w-1.5 h-1.5 text-white" />
                   </div>
                 </div>
-                <div className="flex flex-col text-left truncate">
-                  <span className="text-xs font-semibold text-slate-100 truncate group-hover:text-violet-300">
+                <div className="flex flex-col text-left truncate min-w-0">
+                  <span className="text-xs font-bold text-white truncate group-hover:text-violet-300 transition-colors">
                     {activeChannel?.name || 'My Channel'}
                   </span>
-                  <span className="text-[11px] text-slate-400 font-mono truncate">
-                    {activeChannel?.handle || '@creator'}
+                  <span className="text-[10px] text-slate-400 font-mono truncate">
+                    {activeChannel?.handle || '@creator'} {activeChannel?.subscriber_count ? `• ${activeChannel.subscriber_count}` : ''}
                   </span>
                 </div>
               </div>
-              <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${channelDropdownOpen ? 'rotate-90' : ''}`} />
+              <ChevronRight className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${channelDropdownOpen ? 'rotate-90' : ''}`} />
             </div>
 
             {/* Dropdown for Channels */}
             {channelDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#161926] border border-white/10 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-2 py-1">
-                  Switch Channel
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#121524] border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-2.5 py-1.5">
+                  Connected Channels
                 </div>
                 {channels.map((chan) => (
                   <button
@@ -148,23 +155,26 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                       setActiveChannel(chan);
                       setChannelDropdownOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
-                      activeChannel?.id === chan.id ? 'bg-violet-600/20 text-violet-300' : 'hover:bg-white/5 text-slate-300'
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                      activeChannel?.id === chan.id ? 'bg-violet-600/20 text-violet-300 font-semibold' : 'hover:bg-white/5 text-slate-300'
                     }`}
                   >
-                    <img src={chan.avatar_url} alt={chan.name} className="w-6 h-6 rounded-full object-cover" />
-                    <span className="text-xs font-medium truncate flex-1">{chan.name}</span>
-                    {activeChannel?.id === chan.id && <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />}
+                    <img src={chan.avatar_url} alt={chan.name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                    <span className="text-xs truncate flex-1">{chan.name}</span>
+                    {activeChannel?.id === chan.id && <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />}
                   </button>
                 ))}
-                <div className="pt-2 mt-1 border-t border-white/5">
+                <div className="pt-2 mt-1 border-t border-white/[0.08]">
                   <Link
                     to="/channel-setup"
-                    onClick={() => setChannelDropdownOpen(false)}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-colors font-medium"
+                    onClick={() => {
+                      setChannelDropdownOpen(false);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 px-2.5 py-2 text-xs text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-xl transition-colors font-semibold"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
-                    Connect New Channel
+                    <span>Connect Another Channel</span>
                   </Link>
                 </div>
               </div>
@@ -177,7 +187,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           <Link
             to="/dashboard/new"
             onClick={() => setMobileMenuOpen(false)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm shadow-lg shadow-violet-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-violet-600/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Create New QR Page</span>
@@ -194,10 +204,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                   active
-                    ? 'bg-violet-600/15 text-violet-300 border border-violet-500/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
+                    ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -205,7 +215,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                   <span>{item.name}</span>
                 </div>
                 {item.badge && (
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                    item.badge === 'Pro' ? 'bg-violet-500/30 text-violet-300 border border-violet-500/40' : 'bg-white/10 text-slate-300'
+                  }`}>
                     {item.badge}
                   </span>
                 )}
@@ -215,27 +227,31 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         </nav>
 
         {/* User Footer & Sign out */}
-        <div className="p-4 border-t border-white/5 space-y-3">
-          <div className="p-3 rounded-xl bg-gradient-to-r from-violet-950/40 to-indigo-950/40 border border-violet-500/15">
+        <div className="p-4 border-t border-white/[0.08] space-y-3">
+          <div className="p-3 rounded-2xl bg-[#121524] border border-white/[0.08]">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-slate-300 font-medium">Free Tier Status</span>
-              <span className="text-violet-400 font-bold">1 Free Link</span>
+              <span className="text-slate-300 font-semibold">Plan Status</span>
+              <span className="text-violet-400 font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-full bg-violet-600/20 border border-violet-500/30">
+                {profile?.plan === 'pro' ? 'Pro Plan (Unlimited)' : 'Free Tier (1 Tapframe)'}
+              </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-tight">
-              Upgrade to Pro for unlimited Tapframes and deep cohort analytics.
+              {profile?.plan === 'pro' 
+                ? 'Unlimited dynamic QR pages and advanced lead capture active.'
+                : '1 dynamic QR link included. Upgrade to Pro for unlimited.'}
             </p>
           </div>
 
           <div className="flex items-center justify-between pt-1 text-xs">
-            <div className="flex items-center gap-2 truncate">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-400 truncate max-w-[120px]">
+            <div className="flex items-center gap-2 truncate min-w-0 flex-1">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+              <span className="text-slate-400 truncate text-[11px]">
                 {user?.email || 'Logged in'}
               </span>
             </div>
             <button
               onClick={handleSignOut}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -246,20 +262,20 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col min-h-screen overflow-x-hidden relative">
-        {/* Top Channel Bar (Channel logo on EVERY page) */}
-        <div className="hidden md:flex items-center justify-between px-8 py-3.5 bg-[#0D0F18]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-30">
+        {/* Top Channel Bar for Desktop (Channel logo on EVERY page) */}
+        <div className="hidden md:flex items-center justify-between px-8 py-3.5 bg-[#08090E]/80 backdrop-blur-md border-b border-white/[0.08] sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <img 
-              src={activeChannel?.avatar_url || '/assets/youtube-creator-male.png'} 
+              src={activeChannel?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'} 
               alt={activeChannel?.name}
-              className="w-7 h-7 rounded-full object-cover ring-2 ring-violet-500/30"
+              className="w-8 h-8 rounded-full object-cover ring-2 ring-violet-500/40 shadow"
             />
             <div>
-              <span className="text-xs font-semibold text-slate-200">
-                {activeChannel?.name}
+              <span className="text-xs font-bold text-white">
+                {activeChannel?.name || 'Creator Hub'}
               </span>
               <span className="text-[11px] text-slate-400 ml-2 font-mono">
-                {activeChannel?.subscriber_count || 'Creator Hub'}
+                {activeChannel?.subscriber_count ? `(${activeChannel.subscriber_count})` : ''}
               </span>
             </div>
           </div>
@@ -267,7 +283,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           <div className="flex items-center gap-3">
             <Link
               to="/dashboard/new"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-600/90 hover:bg-violet-600 text-white text-xs font-semibold shadow-md shadow-violet-600/20 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-violet-600/25 transition-all hover:scale-105"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>New QR Page</span>
