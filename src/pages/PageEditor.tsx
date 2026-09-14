@@ -17,13 +17,28 @@ import {
   CheckSquare,
   Square,
   RefreshCw,
-  ArrowRight
+  ArrowRight,
+  Globe
 } from 'lucide-react';
 import type { TapframePage, ProductLink } from '../types';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 import { Mascot } from '../components/Mascot';
 import { UpgradePaywallModal } from '../components/UpgradePaywallModal';
 import { generateUniqueSlug } from '../lib/slug';
+
+const countWords = (text: string): number => {
+  if (!text || !text.trim()) return 0;
+  return text.trim().split(/\s+/).filter(Boolean).length;
+};
+
+const normalizeUrl = (raw: string): string => {
+  if (!raw || !raw.trim()) return '';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return 'https://' + trimmed;
+};
 
 export const PageEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -118,6 +133,25 @@ export const PageEditor: React.FC = () => {
     setSlug(generateUniqueSlug(allSlugs));
   };
 
+  // Word limits (Max 100 words)
+  const MAX_WORDS = 100;
+  const headlineWords = countWords(headline);
+  const subheadlineWords = countWords(subheadline);
+
+  const handleHeadlineChange = (val: string) => {
+    const words = countWords(val);
+    if (words <= MAX_WORDS || val.length < headline.length) {
+      setHeadline(val);
+    }
+  };
+
+  const handleSubheadlineChange = (val: string) => {
+    const words = countWords(val);
+    if (words <= MAX_WORDS || val.length < subheadline.length) {
+      setSubheadline(val);
+    }
+  };
+
   const computedTitle = headline.trim() || campaignName.trim() || 'My Video Resource Page';
 
   const previewPage: TapframePage = {
@@ -133,7 +167,7 @@ export const PageEditor: React.FC = () => {
     badge_text: badgeText,
     headline: headline || 'Get My Free Resource Kit',
     subheadline: subheadline || 'Drop your email below to unlock instant access to all video tools.',
-    product_links: productLinks,
+    product_links: productLinks.map(p => ({ ...p, url: normalizeUrl(p.url) })),
     lead_capture_enabled: leadCaptureEnabled,
     lead_capture_fields: {
       collect_email: true,
@@ -177,6 +211,15 @@ export const PageEditor: React.FC = () => {
     setSaving(true);
     setErrorMessage(null);
 
+    // Clean and normalize all product links
+    const cleanedLinks = productLinks
+      .filter(l => l.title.trim() || l.url.trim())
+      .map(l => ({
+        ...l,
+        title: l.title.trim(),
+        url: normalizeUrl(l.url)
+      }));
+
     const payload: Partial<TapframePage> = {
       title: computedTitle,
       slug: slug.trim(),
@@ -186,7 +229,7 @@ export const PageEditor: React.FC = () => {
       badge_text: badgeText.trim(),
       headline: headline.trim() || 'Exclusive Video Offer',
       subheadline: subheadline.trim(),
-      product_links: productLinks.filter(l => l.title.trim() || l.url.trim()),
+      product_links: cleanedLinks,
       lead_capture_enabled: leadCaptureEnabled,
       lead_capture_fields: {
         collect_email: true,
@@ -225,7 +268,7 @@ export const PageEditor: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
-      {/* Top action header (Clean Apple Minimalist) */}
+      {/* Top action header (Apple Minimalist) */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
         <div className="flex items-center gap-3 min-w-0">
           <Link
@@ -238,7 +281,7 @@ export const PageEditor: React.FC = () => {
             <span className="text-[10px] uppercase font-bold tracking-widest text-violet-400 block truncate">
               {isEditing ? 'Edit QR Tapframe' : 'Create New QR Tapframe'}
             </span>
-            <h1 className="text-lg sm:text-2xl font-black text-white truncate">
+            <h1 className="text-base sm:text-2xl font-black text-white truncate">
               {headline || computedTitle}
             </h1>
           </div>
@@ -302,6 +345,7 @@ export const PageEditor: React.FC = () => {
                   <label className="block text-xs font-medium text-slate-300 mb-1.5">Campaign Name (For Leads grouping)</label>
                   <input
                     type="text"
+                    maxLength={100}
                     value={campaignName}
                     onChange={(e) => setCampaignName(e.target.value)}
                     placeholder="e.g. YouTube: Six Figure Wealth"
@@ -346,36 +390,54 @@ export const PageEditor: React.FC = () => {
 
               {/* Badge / Callout Ribbon */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Badge / Callout Ribbon</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-slate-300">Badge / Callout Ribbon</label>
+                  <span className="text-[10px] text-slate-500">{countWords(badgeText)}/15 words</span>
+                </div>
                 <input
                   type="text"
+                  maxLength={80}
                   value={badgeText}
-                  onChange={(e) => setBadgeText(e.target.value)}
+                  onChange={(e) => {
+                    if (countWords(e.target.value) <= 15 || e.target.value.length < badgeText.length) {
+                      setBadgeText(e.target.value);
+                    }
+                  }}
                   placeholder="e.g. Get the Free Package Below"
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
-              {/* Main Headline */}
+              {/* Main Headline (Max 100 words) */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Main Headline *</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-slate-300">Main Headline *</label>
+                  <span className={`text-[10px] font-mono ${headlineWords >= 95 ? 'text-amber-400' : 'text-slate-500'}`}>
+                    {headlineWords}/{MAX_WORDS} words
+                  </span>
+                </div>
                 <input
                   type="text"
                   required
                   value={headline}
-                  onChange={(e) => setHeadline(e.target.value)}
+                  onChange={(e) => handleHeadlineChange(e.target.value)}
                   placeholder="e.g. The Six Figure Wealth Guide"
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm font-semibold placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
-              {/* Subheadline / Description */}
+              {/* Subheadline / Description (Max 100 words) */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Subheadline / Description</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-slate-300">Subheadline / Description</label>
+                  <span className={`text-[10px] font-mono ${subheadlineWords >= 95 ? 'text-amber-400' : 'text-slate-500'}`}>
+                    {subheadlineWords}/{MAX_WORDS} words
+                  </span>
+                </div>
                 <textarea
                   rows={2}
                   value={subheadline}
-                  onChange={(e) => setSubheadline(e.target.value)}
+                  onChange={(e) => handleSubheadlineChange(e.target.value)}
                   placeholder="e.g. Drop your email below to get the free downloadable guide and resources."
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                 />
@@ -429,6 +491,7 @@ export const PageEditor: React.FC = () => {
                         <div>
                           <input
                             type="text"
+                            maxLength={80}
                             value={link.title}
                             onChange={(e) => handleUpdateProductLink(idx, 'title', e.target.value)}
                             placeholder="Name of the product (e.g. Notion Business Template)"
@@ -437,13 +500,19 @@ export const PageEditor: React.FC = () => {
                         </div>
 
                         <div>
-                          <input
-                            type="url"
-                            value={link.url}
-                            onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
-                            placeholder="Destination URL (e.g. https://creator.gumroad.com/l/...)"
-                            className="w-full px-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
-                          />
+                          <div className="relative">
+                            <Globe className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                            <input
+                              type="text"
+                              value={link.url}
+                              onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
+                              placeholder="e.g. https://creator.gumroad.com or www.yalo.ng"
+                              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-1 pl-1">
+                            Accepts any URL: <code>https://...</code>, <code>www.domain.com</code>, or <code>domain.com</code> (auto-prefixed with https://).
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -507,13 +576,21 @@ export const PageEditor: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Lead Magnet Title */}
+                    {/* Lead Magnet Title (Max 25 words) */}
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Lead Magnet / Asset Title</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-medium text-slate-300">Lead Magnet / Asset Title</label>
+                        <span className="text-[10px] text-slate-500">{countWords(leadMagnetTitle)}/25 words</span>
+                      </div>
                       <input
                         type="text"
+                        maxLength={120}
                         value={leadMagnetTitle}
-                        onChange={(e) => setLeadMagnetTitle(e.target.value)}
+                        onChange={(e) => {
+                          if (countWords(e.target.value) <= 25 || e.target.value.length < leadMagnetTitle.length) {
+                            setLeadMagnetTitle(e.target.value);
+                          }
+                        }}
                         placeholder="e.g. Free Strategy Guide & Template"
                         className="w-full px-3 py-2 rounded-xl bg-[#10121E] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
                       />
@@ -524,6 +601,7 @@ export const PageEditor: React.FC = () => {
                       <label className="block text-[11px] font-medium text-slate-300 mb-1">Submit Button CTA Text</label>
                       <input
                         type="text"
+                        maxLength={40}
                         value={leadCaptureButtonText}
                         onChange={(e) => setLeadCaptureButtonText(e.target.value)}
                         placeholder="e.g. Get Access"
@@ -534,7 +612,7 @@ export const PageEditor: React.FC = () => {
                 )}
               </div>
 
-              {/* Secondary Primary Action Button Underneath Form as requested! */}
+              {/* Primary Action Button Underneath Form */}
               <div className="pt-2">
                 <button
                   type="submit"

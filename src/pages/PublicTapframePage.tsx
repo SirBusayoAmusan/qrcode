@@ -8,16 +8,25 @@ import {
   Sparkles, 
   ArrowRight, 
   Mail, 
-  User,
-  Phone,
+  User, 
+  Phone, 
   Tv, 
-  Lock,
-  QrCode
+  Lock, 
+  QrCode 
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Mascot } from '../components/Mascot';
 import type { TapframePage, Channel } from '../types';
 import confetti from 'canvas-confetti';
+
+const normalizeUrl = (raw: string): string => {
+  if (!raw || !raw.trim()) return '';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return 'https://' + trimmed;
+};
 
 export const PublicTapframePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -34,8 +43,13 @@ export const PublicTapframePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
-  // 1. Check local state first (if testing in creator browser)
-  const localPage = pages.find(p => p.slug === slug || p.id === slug);
+  const targetSlug = (slug || '').trim().toLowerCase();
+
+  // 1. Check local context state first (case-insensitive)
+  const localPage = pages.find(p => 
+    p.slug.toLowerCase() === targetSlug || 
+    p.id.toLowerCase() === targetSlug
+  );
   const localChannel = channels.find(c => c.id === localPage?.channel_id);
 
   // 2. Fetch from Supabase public.pages (or fallback workflows)
@@ -53,10 +67,10 @@ export const PublicTapframePage: React.FC = () => {
 
       try {
         // A. Primary query: Query public.pages table (Accessible by any anonymous mobile scanner)
-        const { data: pageRow, error: pageErr } = await supabase
+        const { data: pageRow } = await supabase
           .from('pages')
           .select('*')
-          .eq('slug', slug)
+          .ilike('slug', targetSlug)
           .maybeSingle();
 
         if (pageRow && isMounted) {
@@ -92,7 +106,7 @@ export const PublicTapframePage: React.FC = () => {
           setLoadingPage(false);
           recordScan(loadedPage.id);
 
-          // Update scan counter in Supabase
+          // Increment scan counter in Supabase
           try {
             await supabase
               .from('pages')
@@ -102,7 +116,22 @@ export const PublicTapframePage: React.FC = () => {
           return;
         }
 
-        // B. Fallback query: workflows table
+        // B. Fallback query: check localStorage directly if stored in another tab/session
+        const savedPages = localStorage.getItem('clearpath_pages_v2');
+        if (savedPages) {
+          try {
+            const parsed = JSON.parse(savedPages) as TapframePage[];
+            const foundLocal = parsed.find(p => p.slug.toLowerCase() === targetSlug || p.id.toLowerCase() === targetSlug);
+            if (foundLocal && isMounted) {
+              setRemotePage(foundLocal);
+              setLoadingPage(false);
+              recordScan(foundLocal.id);
+              return;
+            }
+          } catch (e) {}
+        }
+
+        // C. Fallback query: workflows table
         const { data: wfData, error: wfErr } = await supabase
           .from('workflows')
           .select('data')
@@ -111,7 +140,10 @@ export const PublicTapframePage: React.FC = () => {
         if (!wfErr && wfData && wfData.length > 0) {
           for (const row of wfData) {
             const workflowData = row.data as { pages?: TapframePage[]; channels?: Channel[] };
-            const found = workflowData.pages?.find(p => p.slug === slug || p.id === slug);
+            const found = workflowData.pages?.find(p => 
+              p.slug.toLowerCase() === targetSlug || 
+              p.id.toLowerCase() === targetSlug
+            );
             if (found && isMounted) {
               setRemotePage(found);
               const chan = workflowData.channels?.find(c => c.id === found.channel_id) || workflowData.channels?.[0];
@@ -134,7 +166,7 @@ export const PublicTapframePage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [slug, localPage]);
+  }, [targetSlug, localPage]);
 
   const page = localPage || remotePage;
   const channel = localChannel || remoteChannel || {
@@ -175,7 +207,8 @@ export const PublicTapframePage: React.FC = () => {
   const collectName = page.lead_capture_fields?.collect_name ?? false;
   const collectPhone = page.lead_capture_fields?.collect_phone ?? false;
   const productLinks = page.product_links || [];
-  const primaryDestinationUrl = productLinks[0]?.url || page.lead_magnet_download_url || '';
+  const primaryDestinationRaw = productLinks[0]?.url || page.lead_magnet_download_url || '';
+  const primaryDestinationUrl = normalizeUrl(primaryDestinationRaw);
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,11 +265,7 @@ export const PublicTapframePage: React.FC = () => {
       if (primaryDestinationUrl) {
         setRedirecting(true);
         setTimeout(() => {
-          let target = primaryDestinationUrl;
-          if (!target.startsWith('http://') && !target.startsWith('https://')) {
-            target = 'https://' + target;
-          }
-          window.location.href = target;
+          window.location.href = primaryDestinationUrl;
         }, 1500);
       }
     } catch (err) {
@@ -245,11 +274,7 @@ export const PublicTapframePage: React.FC = () => {
       if (primaryDestinationUrl) {
         setRedirecting(true);
         setTimeout(() => {
-          let target = primaryDestinationUrl;
-          if (!target.startsWith('http://') && !target.startsWith('https://')) {
-            target = 'https://' + target;
-          }
-          window.location.href = target;
+          window.location.href = primaryDestinationUrl;
         }, 1500);
       }
     } finally {
@@ -259,11 +284,10 @@ export const PublicTapframePage: React.FC = () => {
 
   const handleLinkClick = (url: string) => {
     recordClick(page.id);
-    let target = url;
-    if (!target.startsWith('http://') && !target.startsWith('https://')) {
-      target = 'https://' + target;
+    const target = normalizeUrl(url);
+    if (target) {
+      window.open(target, '_blank', 'noopener,noreferrer');
     }
-    window.open(target, '_blank', 'noopener,noreferrer');
   };
 
   const handleGoToLanding = () => {
@@ -320,7 +344,7 @@ export const PublicTapframePage: React.FC = () => {
           <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300">
             <Tv className="w-3 h-3 text-red-500" />
             <span>As seen in: <strong>{page.associated_content.title}</strong></span>
-            {page.associated_content.timestamp && (
+            {page.associated_content?.timestamp && (
               <span className="text-violet-400 font-mono font-bold">({page.associated_content.timestamp})</span>
             )}
           </div>
@@ -437,7 +461,7 @@ export const PublicTapframePage: React.FC = () => {
                 {/* Primary Destination Action Button */}
                 {primaryDestinationUrl && (
                   <a
-                    href={primaryDestinationUrl.startsWith('http') ? primaryDestinationUrl : `https://${primaryDestinationUrl}`}
+                    href={primaryDestinationUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-transform hover:scale-105"

@@ -3,7 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signIn, signUp } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { Mascot } from '../components/Mascot';
-import { ArrowRight, Lock, Mail, User, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  ArrowRight, 
+  Lock, 
+  Mail, 
+  User, 
+  Sparkles, 
+  CheckCircle2, 
+  AlertCircle,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import { useApp } from '../lib/context';
 
 export const AuthPage: React.FC = () => {
@@ -14,6 +24,9 @@ export const AuthPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(isSignUpParam);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -26,6 +39,19 @@ export const AuthPage: React.FC = () => {
     e.preventDefault();
     setError(null);
     setNotice(null);
+
+    // Validate confirmation password on signup
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match. Please verify and re-enter your password.');
+        return;
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -35,34 +61,32 @@ export const AuthPage: React.FC = () => {
           setNotice('Account created! Please check your email to confirm your account.');
           setIsSignUp(false);
         } else {
-          // New user -> channel branding setup
           navigate('/channel-setup');
         }
       } else {
         const data = await signIn(email.trim(), password);
-        // Refresh and pull remote user data immediately so channel & pages are already loaded!
         if (data.user) {
           try {
             await refreshData();
           } catch (e) {}
         }
-        // Direct returning creators straight to their dashboard
         navigate('/dashboard');
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      const msg = err.message || '';
-      if (msg.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please check your credentials or create a new account.');
-      } else if (msg.includes('User already registered')) {
+      const rawMsg = (err.message || '').toLowerCase();
+      
+      if (rawMsg.includes('invalid login credentials') || rawMsg.includes('invalid_grant') || rawMsg.includes('load failed')) {
+        setError('Incorrect email or password. Please verify your details or create a new account.');
+      } else if (rawMsg.includes('user already registered') || rawMsg.includes('already exists')) {
         setError('An account with this email already exists. Please sign in instead.');
         setIsSignUp(false);
-      } else if (msg.includes('Email not confirmed')) {
-        setError('Please confirm your email address before signing in, or disable email confirmation in your Supabase Auth settings.');
-      } else if (msg.includes('Password should be at least')) {
-        setError('Password must be at least 6 characters long.');
+      } else if (rawMsg.includes('email not confirmed')) {
+        setError('Please confirm your email address or sign in directly.');
+      } else if (rawMsg.includes('password should be at least')) {
+        setError('Password must be at least 6 characters.');
       } else {
-        setError(msg || 'Authentication error. Please try again.');
+        setError('Unable to sign in. Please check your email and password, or check your internet connection.');
       }
     } finally {
       setLoading(false);
@@ -93,7 +117,7 @@ export const AuthPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Main Card (Apple Minimalist styling) */}
+      {/* Main Card */}
       <div className="w-full max-w-sm sm:max-w-md bg-[#10121E] border border-white/[0.08] rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/60 relative z-10">
         {isPro && (
           <div className="mb-5 p-3 rounded-2xl bg-violet-950/50 border border-violet-500/30 flex items-center gap-2 text-xs text-violet-300">
@@ -125,16 +149,16 @@ export const AuthPage: React.FC = () => {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2 animate-in fade-in">
+          <div className="mb-4 p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <span className="leading-relaxed">{error}</span>
           </div>
         )}
 
         {notice && (
-          <div className="mb-4 p-3 rounded-2xl bg-violet-950/60 border border-violet-500/40 text-violet-200 text-xs flex items-start gap-2 animate-in fade-in">
+          <div className="mb-4 p-3.5 rounded-2xl bg-violet-950/60 border border-violet-500/40 text-violet-200 text-xs flex items-start gap-2.5 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span>{notice}</span>
+            <span className="leading-relaxed">{notice}</span>
           </div>
         )}
 
@@ -176,16 +200,50 @@ export const AuthPage: React.FC = () => {
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 minLength={6}
                 placeholder="•••••••• (min 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
+                className="w-full pl-10 pr-11 py-3 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
+
+          {isSignUp && (
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="•••••••• (re-enter password)"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-10 pr-11 py-3 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"
