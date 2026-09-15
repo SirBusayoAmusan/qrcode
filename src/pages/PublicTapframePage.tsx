@@ -28,6 +28,43 @@ const normalizeUrl = (raw: string): string => {
   return 'https://' + trimmed;
 };
 
+// Automatic IP Geolocation Resolver
+const detectViewerLocation = async (): Promise<{ country: string; city: string }> => {
+  try {
+    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.country_name) {
+        return {
+          country: data.country_name,
+          city: data.city || ''
+        };
+      }
+    }
+  } catch (e) {
+    try {
+      const res2 = await fetch('https://api.country.is', { signal: AbortSignal.timeout(1500) });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2.country) {
+          return { country: data2.country, city: '' };
+        }
+      }
+    } catch (e2) {}
+  }
+
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (timeZone) {
+      const parts = timeZone.split('/');
+      const region = parts[parts.length - 1].replace(/_/g, ' ');
+      return { country: region, city: region };
+    }
+  } catch (e3) {}
+
+  return { country: 'Global Viewer', city: '' };
+};
+
 export const PublicTapframePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { pages, channels, addLead, recordScan, recordClick } = useApp();
@@ -74,6 +111,7 @@ export const PublicTapframePage: React.FC = () => {
           .maybeSingle();
 
         if (pageRow && isMounted) {
+          const currentScans = (pageRow.total_scans || 0) + 1;
           const loadedPage: TapframePage = {
             id: pageRow.id,
             channel_id: pageRow.channel_id || 'ch-1',
@@ -91,8 +129,8 @@ export const PublicTapframePage: React.FC = () => {
             lead_capture_fields: pageRow.lead_capture_fields || { collect_email: true, collect_name: false, collect_phone: false },
             lead_magnet_title: pageRow.lead_magnet_title || 'Free Strategy Guide & Template',
             lead_capture_button_text: pageRow.lead_capture_button_text || 'Get Access',
-            total_scans: (pageRow.total_scans || 0) + 1,
-            unique_visitors: (pageRow.total_scans || 0) + 1,
+            total_scans: currentScans,
+            unique_visitors: currentScans,
             total_leads: pageRow.total_leads || 0,
             total_clicks: pageRow.total_clicks || 0,
             created_at: pageRow.created_at || new Date().toISOString(),
@@ -106,11 +144,11 @@ export const PublicTapframePage: React.FC = () => {
           setLoadingPage(false);
           recordScan(loadedPage.id);
 
-          // Increment scan counter in Supabase
+          // Increment scan counter in Supabase in real-time
           try {
             await supabase
               .from('pages')
-              .update({ total_scans: (pageRow.total_scans || 0) + 1 })
+              .update({ total_scans: currentScans })
               .eq('id', pageRow.id);
           } catch (e) {}
           return;
@@ -216,6 +254,9 @@ export const PublicTapframePage: React.FC = () => {
 
     setSubmitting(true);
     try {
+      // Automatic IP Geolocation detection
+      const location = await detectViewerLocation();
+
       await addLead({
         page_id: page.id,
         page_title: page.title,
@@ -226,12 +267,12 @@ export const PublicTapframePage: React.FC = () => {
         phone: phone.trim() || undefined,
         source: 'Mobile QR Scan',
         referrer: 'TV / Video Stream',
-        device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : /Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-        country: 'Global Viewer',
-        city: 'Mobile User',
+        device: 'mobile',
+        country: location.country,
+        city: location.city || undefined,
       });
 
-      // Also record to Supabase leads table
+      // Record directly to Supabase leads table
       try {
         await supabase
           .from('leads')
@@ -246,8 +287,18 @@ export const PublicTapframePage: React.FC = () => {
             source: 'Mobile QR Scan',
             referrer: 'TV Screen',
             device: 'mobile',
-            country: 'Global Viewer',
+            country: location.country,
+            city: location.city || null,
           });
+
+        // Increment total_leads on public.pages in Supabase
+        await supabase
+          .from('pages')
+          .update({ 
+            total_leads: (page.total_leads || 0) + 1,
+            total_clicks: (page.total_clicks || 0) + (primaryDestinationUrl ? 1 : 0)
+          })
+          .eq('id', page.id);
       } catch (e) {}
 
       // Fire celebratory confetti!
@@ -282,8 +333,17 @@ export const PublicTapframePage: React.FC = () => {
     }
   };
 
-  const handleLinkClick = (url: string) => {
+  const handleLinkClick = async (url: string) => {
     recordClick(page.id);
+    
+    // Increment outbound clicks in Supabase
+    try {
+      await supabase
+        .from('pages')
+        .update({ total_clicks: (page.total_clicks || 0) + 1 })
+        .eq('id', page.id);
+    } catch (e) {}
+
     const target = normalizeUrl(url);
     if (target) {
       window.open(target, '_blank', 'noopener,noreferrer');

@@ -13,6 +13,7 @@ interface AppContextType {
   isLoading: boolean;
   canCreatePage: boolean;
   upgradeToPro: () => void;
+  updateProfilePlan: (plan: 'free' | 'pro') => Promise<void>;
   setActiveChannel: (channel: Channel) => void;
   createChannel: (channelData: Omit<Channel, 'id' | 'user_id' | 'created_at'>) => Promise<Channel>;
   updateChannel: (channelId: string, updates: Partial<Channel>) => Promise<void>;
@@ -393,6 +394,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persistToRemote(channels, pages, leads, 'pro');
   };
 
+  const updateProfilePlan = async (plan: 'free' | 'pro') => {
+    setUserPlan(plan);
+    await persistToRemote(channels, pages, leads, plan);
+  };
+
   // Scoped to active channel pages (Never checks orphaned pages from other users or channels)
   const activeChannelPages = pages.filter(p => {
     if (!activeChannel) return true;
@@ -574,6 +580,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoading,
         canCreatePage,
         upgradeToPro,
+        updateProfilePlan,
         setActiveChannel,
         createChannel,
         updateChannel,

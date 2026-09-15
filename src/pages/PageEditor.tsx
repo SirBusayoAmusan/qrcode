@@ -99,8 +99,9 @@ export const PageEditor: React.FC = () => {
     desc: 'Free tier includes 1 product link per Tapframe. Upgrade to Pro to add unlimited product links, Notion hubs, courses, and tools.'
   });
 
-  // Check if free limit blocks creation of a 2nd page
-  const isBlockedByFreeLimit = !isEditing && !canCreatePage;
+  // Scoped active channel pages for accurate limit check
+  const activeChannelPages = pages.filter(p => !activeChannel || p.channel_id === activeChannel.id);
+  const isBlockedByFreeLimit = !isEditing && profile?.plan === 'free' && activeChannelPages.length >= 1;
 
   const handleAddProductLink = () => {
     if (!isPro && productLinks.length >= 1) {
@@ -268,20 +269,20 @@ export const PageEditor: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
-      {/* Top action header (Apple Minimalist) */}
-      <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+      {/* Top action header (Apple-Style Clean Header) */}
+      <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/dashboard"
-            className="p-2.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-colors shrink-0"
+            className="p-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shrink-0 shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="min-w-0">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-violet-400 block truncate">
+            <span className="text-[10px] uppercase font-bold tracking-widest text-violet-600 block truncate">
               {isEditing ? 'Edit QR Tapframe' : 'Create New QR Tapframe'}
             </span>
-            <h1 className="text-base sm:text-2xl font-black text-white truncate">
+            <h1 className="text-base sm:text-2xl font-extrabold text-slate-900 truncate">
               {headline || computedTitle}
             </h1>
           </div>
@@ -291,7 +292,7 @@ export const PageEditor: React.FC = () => {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="px-4 sm:px-6 py-2.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-xl shadow-violet-600/25 flex items-center gap-2 transition-all hover:scale-105 active:scale-[0.98] shrink-0 cursor-pointer"
+          className="px-4 sm:px-6 py-2.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-md shadow-violet-600/20 flex items-center gap-2 transition-all hover:scale-105 active:scale-[0.98] shrink-0 cursor-pointer"
         >
           <Save className="w-4 h-4" />
           <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save & Publish QR'}</span>
@@ -300,9 +301,9 @@ export const PageEditor: React.FC = () => {
       </div>
 
       {isBlockedByFreeLimit && (
-        <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
-            <Lock className="w-4 h-4 text-rose-400 shrink-0" />
+            <Lock className="w-4 h-4 text-rose-600 shrink-0" />
             <span><strong>Free Tier Limit (1 Tapframe):</strong> You have 1 active QR link. Upgrade to Pro for unlimited pages.</span>
           </div>
           <button 
@@ -314,7 +315,7 @@ export const PageEditor: React.FC = () => {
               });
               setShowPaywallModal(true);
             }}
-            className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs whitespace-nowrap cursor-pointer self-start sm:self-auto"
+            className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs whitespace-nowrap cursor-pointer self-start sm:self-auto shadow-xs"
           >
             Upgrade to Pro
           </button>
@@ -322,8 +323,8 @@ export const PageEditor: React.FC = () => {
       )}
 
       {errorMessage && (
-        <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -334,46 +335,46 @@ export const PageEditor: React.FC = () => {
         <div className="lg:col-span-7 space-y-6">
           <form onSubmit={handleSave} className="space-y-6">
             {/* 1. Core Page & Guaranteed Unique URL */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-[#10121E] border border-white/[0.08] space-y-4 shadow-xl">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 space-y-4 shadow-xs">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-700">
                 <Layers className="w-4 h-4" />
-                <span>1. Core Page & Guaranteed Unique URL</span>
+                <span>1. Core Page & Unique Collision-Resistant URL</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Campaign Name (For Leads grouping)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Campaign Name (For Leads grouping)</label>
                   <input
                     type="text"
                     maxLength={100}
                     value={campaignName}
                     onChange={(e) => setCampaignName(e.target.value)}
                     placeholder="e.g. YouTube: Six Figure Wealth"
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-slate-300">Autogenerated Unique Slug</label>
+                    <label className="text-xs font-semibold text-slate-700">Autogenerated Unique Slug</label>
                     <button
                       type="button"
                       onClick={handleRegenerateSlug}
-                      className="text-[11px] text-violet-400 hover:text-violet-300 flex items-center gap-1 cursor-pointer"
+                      className="text-[11px] text-violet-600 hover:text-violet-700 font-semibold flex items-center gap-1 cursor-pointer"
                       title="Generate new unique slug"
                     >
                       <RefreshCw className="w-3 h-3" />
                       <span>Regenerate</span>
                     </button>
                   </div>
-                  <div className="flex items-center rounded-2xl bg-[#090A12] border border-white/[0.08] px-3">
-                    <span className="text-xs text-slate-500 font-mono">qr.clearpath.click/q/</span>
+                  <div className="flex items-center rounded-2xl bg-slate-50 border border-slate-200 px-3">
+                    <span className="text-xs text-slate-400 font-mono">qr.clearpath.click/q/</span>
                     <input
                       type="text"
                       required
                       readOnly
                       value={slug}
-                      className="w-full py-2.5 pl-1 bg-transparent text-emerald-400 text-xs sm:text-sm font-mono focus:outline-none cursor-default font-bold"
+                      className="w-full py-2.5 pl-1 bg-transparent text-emerald-700 text-xs sm:text-sm font-mono focus:outline-none cursor-default font-bold"
                     />
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">Unique collision-resistant URL slug guaranteed for this QR code.</p>
@@ -382,8 +383,8 @@ export const PageEditor: React.FC = () => {
             </div>
 
             {/* 2. Streamlined Mobile Landing Page Builder */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-[#10121E] border border-white/[0.08] space-y-4 sm:space-y-5 shadow-xl">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 space-y-4 sm:space-y-5 shadow-xs">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-700">
                 <Smartphone className="w-4 h-4" />
                 <span>2. Mobile Page Content</span>
               </div>
@@ -391,8 +392,8 @@ export const PageEditor: React.FC = () => {
               {/* Badge / Callout Ribbon */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-slate-300">Badge / Callout Ribbon</label>
-                  <span className="text-[10px] text-slate-500">{countWords(badgeText)}/15 words</span>
+                  <label className="text-xs font-semibold text-slate-700">Badge / Callout Ribbon</label>
+                  <span className="text-[10px] text-slate-400">{countWords(badgeText)}/15 words</span>
                 </div>
                 <input
                   type="text"
@@ -404,15 +405,15 @@ export const PageEditor: React.FC = () => {
                     }
                   }}
                   placeholder="e.g. Get the Free Package Below"
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                 />
               </div>
 
               {/* Main Headline (Max 100 words) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-slate-300">Main Headline *</label>
-                  <span className={`text-[10px] font-mono ${headlineWords >= 95 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <label className="text-xs font-semibold text-slate-700">Main Headline *</label>
+                  <span className={`text-[10px] font-mono ${headlineWords >= 95 ? 'text-amber-600' : 'text-slate-400'}`}>
                     {headlineWords}/{MAX_WORDS} words
                   </span>
                 </div>
@@ -422,15 +423,15 @@ export const PageEditor: React.FC = () => {
                   value={headline}
                   onChange={(e) => handleHeadlineChange(e.target.value)}
                   placeholder="e.g. The Six Figure Wealth Guide"
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm font-semibold placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm font-semibold placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                 />
               </div>
 
               {/* Subheadline / Description (Max 100 words) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-slate-300">Subheadline / Description</label>
-                  <span className={`text-[10px] font-mono ${subheadlineWords >= 95 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <label className="text-xs font-semibold text-slate-700">Subheadline / Description</label>
+                  <span className={`text-[10px] font-mono ${subheadlineWords >= 95 ? 'text-amber-600' : 'text-slate-400'}`}>
                     {subheadlineWords}/{MAX_WORDS} words
                   </span>
                 </div>
@@ -439,19 +440,19 @@ export const PageEditor: React.FC = () => {
                   value={subheadline}
                   onChange={(e) => handleSubheadlineChange(e.target.value)}
                   placeholder="e.g. Drop your email below to get the free downloadable guide and resources."
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                 />
               </div>
 
               {/* Product Destination Links Section */}
-              <div className="p-4 rounded-2xl bg-[#090A12] border border-white/[0.08] space-y-3">
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Link2 className="w-3.5 h-3.5 text-violet-400" />
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-violet-600" />
                       <span>Product Destination Link</span>
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-slate-500">
                       {isPro ? 'Add unlimited product & resource links.' : 'Free tier allows 1 product link.'}
                     </div>
                   </div>
@@ -459,7 +460,7 @@ export const PageEditor: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddProductLink}
-                    className="px-3 py-1.5 rounded-xl bg-violet-600/25 hover:bg-violet-600/35 border border-violet-500/35 text-violet-300 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-violet-100 hover:bg-violet-200 text-violet-800 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Link</span>
@@ -467,21 +468,21 @@ export const PageEditor: React.FC = () => {
                 </div>
 
                 {productLinks.length === 0 ? (
-                  <div className="p-3.5 text-center text-xs text-slate-500 border border-dashed border-white/10 rounded-2xl">
+                  <div className="p-3.5 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-2xl bg-white">
                     No product link added. Click "+ Add Link" to set the destination URL where visitors are sent after clicking Get Access.
                   </div>
                 ) : (
                   <div className="space-y-3 pt-1">
                     {productLinks.map((link, idx) => (
-                      <div key={link.id || idx} className="p-3.5 rounded-2xl bg-[#10121E] border border-white/[0.08] space-y-2.5 relative">
+                      <div key={link.id || idx} className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5 relative shadow-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-violet-300">
+                          <span className="text-[11px] font-bold text-violet-700">
                             {idx === 0 ? 'Primary Destination Link #1' : `Product Link #${idx + 1}`}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleRemoveProductLink(idx)}
-                            className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer"
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                             title="Remove link"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -495,19 +496,19 @@ export const PageEditor: React.FC = () => {
                             value={link.title}
                             onChange={(e) => handleUpdateProductLink(idx, 'title', e.target.value)}
                             placeholder="Name of the product (e.g. Notion Business Template)"
-                            className="w-full px-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                           />
                         </div>
 
                         <div>
                           <div className="relative">
-                            <Globe className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                            <Globe className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                             <input
                               type="text"
                               value={link.url}
                               onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
                               placeholder="e.g. https://creator.gumroad.com or www.yalo.ng"
-                              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                             />
                           </div>
                           <p className="text-[10px] text-slate-500 mt-1 pl-1">
@@ -521,11 +522,11 @@ export const PageEditor: React.FC = () => {
               </div>
 
               {/* Enable Email Lead Capture with Field Selection */}
-              <div className="p-4 rounded-2xl bg-[#090A12] border border-white/[0.08] space-y-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-bold text-white">Enable Email Lead Capture</div>
-                    <div className="text-[11px] text-slate-400">Collect visitor email/phone before granting product access.</div>
+                    <div className="text-xs font-bold text-slate-900">Enable Email Lead Capture</div>
+                    <div className="text-[11px] text-slate-500">Collect visitor email/phone before granting product access.</div>
                   </div>
                   <input
                     type="checkbox"
@@ -536,15 +537,15 @@ export const PageEditor: React.FC = () => {
                 </div>
 
                 {leadCaptureEnabled && (
-                  <div className="space-y-4 pt-3 border-t border-white/[0.06]">
+                  <div className="space-y-4 pt-3 border-t border-slate-200">
                     {/* Form Fields to Collect */}
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
                         Select Visitor Details to Collect:
                       </label>
                       <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="p-2.5 rounded-xl bg-[#10121E] border border-violet-500/30 text-white flex items-center gap-2">
-                          <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <div className="p-2.5 rounded-xl bg-white border border-violet-200 text-slate-900 flex items-center gap-2 shadow-xs">
+                          <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span className="font-semibold text-xs">Email</span>
                         </div>
 
@@ -553,11 +554,11 @@ export const PageEditor: React.FC = () => {
                           onClick={() => setCollectName(!collectName)}
                           className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs cursor-pointer transition-all ${
                             collectName
-                              ? 'bg-violet-600/20 border-violet-500 text-white'
-                              : 'bg-[#10121E] border-white/[0.08] text-slate-400 hover:text-white'
+                              ? 'bg-violet-100 border-violet-300 text-violet-900 font-semibold shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          {collectName ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
+                          {collectName ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4 text-slate-400" />}
                           <span>Full Name</span>
                         </button>
 
@@ -566,21 +567,21 @@ export const PageEditor: React.FC = () => {
                           onClick={() => setCollectPhone(!collectPhone)}
                           className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs cursor-pointer transition-all ${
                             collectPhone
-                              ? 'bg-violet-600/20 border-violet-500 text-white'
-                              : 'bg-[#10121E] border-white/[0.08] text-slate-400 hover:text-white'
+                              ? 'bg-violet-100 border-violet-300 text-violet-900 font-semibold shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          {collectPhone ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
+                          {collectPhone ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4 text-slate-400" />}
                           <span>Phone No.</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Lead Magnet Title (Max 25 words) */}
+                    {/* Lead Magnet Title */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-medium text-slate-300">Lead Magnet / Asset Title</label>
-                        <span className="text-[10px] text-slate-500">{countWords(leadMagnetTitle)}/25 words</span>
+                        <label className="text-[11px] font-semibold text-slate-700">Lead Magnet / Asset Title</label>
+                        <span className="text-[10px] text-slate-400">{countWords(leadMagnetTitle)}/25 words</span>
                       </div>
                       <input
                         type="text"
@@ -592,20 +593,20 @@ export const PageEditor: React.FC = () => {
                           }
                         }}
                         placeholder="e.g. Free Strategy Guide & Template"
-                        className="w-full px-3 py-2 rounded-xl bg-[#10121E] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                       />
                     </div>
 
                     {/* Submit Button CTA Text */}
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Submit Button CTA Text</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Submit Button CTA Text</label>
                       <input
                         type="text"
                         maxLength={40}
                         value={leadCaptureButtonText}
                         onChange={(e) => setLeadCaptureButtonText(e.target.value)}
                         placeholder="e.g. Get Access"
-                        className="w-full px-3 py-2 rounded-xl bg-[#10121E] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                       />
                     </div>
                   </div>
@@ -617,7 +618,7 @@ export const PageEditor: React.FC = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-violet-600/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm shadow-md shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{saving ? 'Publishing Tapframe...' : 'Save & Publish QR Tapframe'}</span>
@@ -629,29 +630,29 @@ export const PageEditor: React.FC = () => {
 
         {/* Right Sticky Preview */}
         <div className="lg:col-span-5 sticky top-20 space-y-4">
-          <div className="flex bg-[#10121E] p-1 rounded-2xl border border-white/[0.08]">
+          <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
             <button
               onClick={() => setPreviewTab('mobile')}
               className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                previewTab === 'mobile' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                previewTab === 'mobile' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5" />
+              <Smartphone className="w-3.5 h-3.5 text-violet-600" />
               <span>Viewer Mobile View</span>
             </button>
             <button
               onClick={() => setPreviewTab('qr')}
               className={`flex-1 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                previewTab === 'qr' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                previewTab === 'qr' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Tv className="w-3.5 h-3.5" />
+              <Tv className="w-3.5 h-3.5 text-violet-600" />
               <span>Video On-Screen Frame</span>
             </button>
           </div>
 
-          <div className="p-4 rounded-3xl bg-[#10121E] border border-white/[0.08] flex flex-col items-center justify-center relative">
-            <div className="mb-2">
+          <div className="p-5 rounded-3xl bg-white border border-slate-200/90 flex flex-col items-center justify-center relative shadow-xs">
+            <div className="mb-3">
               <Mascot 
                 mood="curious" 
                 size="xs" 
@@ -661,7 +662,7 @@ export const PageEditor: React.FC = () => {
             </div>
 
             {previewTab === 'mobile' ? (
-              <div className="w-full max-w-[320px] rounded-[36px] bg-[#07080D] border-4 border-slate-700 shadow-2xl overflow-hidden p-4 text-center relative">
+              <div className="w-full max-w-[320px] rounded-[36px] bg-slate-950 text-white border-4 border-slate-800 shadow-2xl overflow-hidden p-4 text-center relative">
                 {/* 1. Channel Header */}
                 <div className="flex items-center justify-center gap-2 mb-3 pb-2 border-b border-white/[0.08]">
                   {activeChannel?.avatar_url && (
@@ -745,7 +746,7 @@ export const PageEditor: React.FC = () => {
                       {productLinks.map((link, i) => (
                         <div
                           key={i}
-                          className="py-2.5 px-3 rounded-2xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.08] text-xs font-semibold text-slate-200 flex items-center justify-between shadow-sm"
+                          className="py-2.5 px-3 rounded-2xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.08] text-xs font-semibold text-slate-200 flex items-center justify-between shadow-xs"
                         >
                           <span className="truncate">{link.title || `Product Link #${i + 1}`}</span>
                           <ExternalLink className="w-3.5 h-3.5 text-violet-400 shrink-0" />

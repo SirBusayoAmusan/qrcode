@@ -5,7 +5,6 @@ import { Logo } from '../components/Logo';
 import { Mascot } from '../components/Mascot';
 import { ArrowRight, Radio, Smartphone, Video, Play, Upload, AlertCircle, Sparkles, Image as ImageIcon } from 'lucide-react';
 
-// Off-screen canvas image compressor to ensure avatar data stays compact (<30KB)
 const compressImageFile = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -38,7 +37,6 @@ const compressImageFile = (file: File): Promise<string> => {
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        // Export high quality but ultra-compact JPEG
         const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
         resolve(compressedDataUrl);
       };
@@ -55,7 +53,6 @@ export const ChannelSetupPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // If user already has a channel configured, load its data or redirect to dashboard
   const existingChan = activeChannel || channels[0];
 
   const [name, setName] = useState(existingChan?.name || profile?.full_name || '');
@@ -70,7 +67,6 @@ export const ChannelSetupPage: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // If user already has channels set up and didn't come here to edit, redirect straight to dashboard
   useEffect(() => {
     if (channels && channels.length > 0 && !window.location.search.includes('edit=true')) {
       navigate('/dashboard', { replace: true });
@@ -98,7 +94,6 @@ export const ChannelSetupPage: React.FC = () => {
       const compressed = await compressImageFile(file);
       setAvatarUrl(compressed);
     } catch (err) {
-      console.warn('Fallback to standard file reader:', err);
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
@@ -149,13 +144,13 @@ export const ChannelSetupPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#07080D] text-slate-100 flex flex-col items-center justify-center px-4 py-8 sm:py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col items-center justify-center px-4 py-8 sm:py-12 relative overflow-hidden">
       {/* Background ambient lighting */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] bg-violet-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] bg-violet-400/10 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Header */}
       <div className="mb-6 text-center relative z-10 flex flex-col items-center w-full max-w-lg">
-        <Logo to="/" size="lg" className="justify-center mb-3" />
+        <Logo to="/" size="lg" theme="light" className="justify-center mb-3" />
         
         <div className="my-1">
           <Mascot 
@@ -166,26 +161,26 @@ export const ChannelSetupPage: React.FC = () => {
           />
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-1">
+        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
           Connect your creator brand
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-md">
+        <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-md">
           Your logo and colors appear automatically on every QR landing page and video Tapframe.
         </p>
       </div>
 
       {/* Main Card (Apple-style minimalist) */}
-      <div className="w-full max-w-lg bg-[#10121E] border border-white/[0.08] rounded-3xl p-5 sm:p-8 shadow-2xl shadow-black/60 relative z-10">
+      <div className="w-full max-w-lg bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xl shadow-slate-200/60 relative z-10">
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           {/* Platform selection */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-2">Primary Content Platform</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">Primary Content Platform</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { id: 'youtube', label: 'YouTube', icon: Play, color: 'text-red-400' },
-                { id: 'podcast', label: 'Podcast', icon: Radio, color: 'text-purple-400' },
-                { id: 'tiktok', label: 'TikTok/IG', icon: Smartphone, color: 'text-pink-400' },
-                { id: 'other', label: 'Brand/Site', icon: Video, color: 'text-blue-400' },
+                { id: 'youtube', label: 'YouTube', icon: Play, color: 'text-red-500' },
+                { id: 'podcast', label: 'Podcast', icon: Radio, color: 'text-purple-600' },
+                { id: 'tiktok', label: 'TikTok/IG', icon: Smartphone, color: 'text-pink-600' },
+                { id: 'other', label: 'Brand/Site', icon: Video, color: 'text-blue-600' },
               ].map((p) => {
                 const Icon = p.icon;
                 const isSelected = platform === p.id;
@@ -196,8 +191,8 @@ export const ChannelSetupPage: React.FC = () => {
                     onClick={() => setPlatform(p.id as any)}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-violet-600/20 border-violet-500 text-white shadow-md shadow-violet-600/20'
-                        : 'bg-[#090A12] border-white/[0.06] text-slate-400 hover:text-white'
+                        ? 'bg-violet-50 border-violet-400 text-violet-900 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${p.color}`} />
@@ -210,20 +205,20 @@ export const ChannelSetupPage: React.FC = () => {
 
           {/* Logo Upload with compression */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
-              Channel Logo / Avatar <span className="text-slate-500 font-normal">(Max 10MB)</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Channel Logo / Avatar <span className="text-slate-400 font-normal">(Max 10MB)</span>
             </label>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 p-3.5 rounded-2xl bg-[#090A12] border border-white/[0.08]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="relative shrink-0">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt="Channel Preview"
-                    className="w-14 h-14 rounded-full object-cover ring-2 ring-violet-500 shadow-md"
+                    className="w-14 h-14 rounded-full object-cover ring-2 ring-violet-500 shadow-sm"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                  <div className="w-14 h-14 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
                     <ImageIcon className="w-6 h-6" />
                   </div>
                 )}
@@ -242,7 +237,7 @@ export const ChannelSetupPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-3.5 py-1.5 rounded-xl bg-violet-600/25 hover:bg-violet-600/35 border border-violet-500/40 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload Logo</span>
@@ -252,7 +247,7 @@ export const ChannelSetupPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setAvatarUrl('')}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Remove
                     </button>
@@ -264,14 +259,14 @@ export const ChannelSetupPage: React.FC = () => {
                   value={avatarUrl.startsWith('data:') ? '' : avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
                   placeholder="Or paste image URL (e.g. https://...)"
-                  className="w-full px-3 py-1.5 rounded-xl bg-[#10121E] border border-white/[0.08] text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-mono placeholder:text-slate-400 focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>
 
             {uploadError && (
-              <div className="mt-2 p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-1.5 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="mt-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                 <span>{uploadError}</span>
               </div>
             )}
@@ -280,24 +275,24 @@ export const ChannelSetupPage: React.FC = () => {
           {/* Channel Name & Handle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Channel / Brand Name *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Channel / Brand Name *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Oluwaseun Tech & Media"
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Handle / Username</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Handle / Username</label>
               <input
                 type="text"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="e.g. @oluwaseun"
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm font-mono placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
               />
             </div>
           </div>
@@ -305,17 +300,17 @@ export const ChannelSetupPage: React.FC = () => {
           {/* Subscribers & Accent Color */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Subscriber Count / Tag</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Subscriber Count / Tag</label>
               <input
                 type="text"
                 value={subscriberCount}
                 onChange={(e) => setSubscriberCount(e.target.value)}
                 placeholder="e.g. 50K subscribers"
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs sm:text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Brand Accent Color</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Brand Accent Color</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -327,7 +322,7 @@ export const ChannelSetupPage: React.FC = () => {
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#090A12] border border-white/[0.08] text-white text-xs font-mono focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm font-mono focus:bg-white focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>
@@ -335,13 +330,13 @@ export const ChannelSetupPage: React.FC = () => {
 
           {/* Tagline */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Channel Tagline / Bio</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Channel Tagline / Bio</label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Video marketing strategies and free resources..."
-              className="w-full px-3.5 py-2 rounded-2xl bg-[#090A12] border border-white/[0.08] text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+              className="w-full px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500"
             />
           </div>
 
@@ -350,7 +345,7 @@ export const ChannelSetupPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-violet-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-violet-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
             >
               <span>Save Channel Branding & Go to Dashboard</span>
               <ArrowRight className="w-4 h-4" />

@@ -1,215 +1,295 @@
-import React from 'react';
-import { 
-  CheckCircle2, 
-  Sparkles,
-  Lock
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { useApp } from '../lib/context';
+import { 
+  Check, 
+  Sparkles, 
+  ShieldCheck, 
+  Zap, 
+  Tv, 
+  Users, 
+  BarChart3, 
+  Palette, 
+  ArrowRight,
+  HelpCircle,
+  CreditCard,
+  CheckCircle2
+} from 'lucide-react';
 import { Mascot } from '../components/Mascot';
-import confetti from 'canvas-confetti';
 
 export const PlanAndBillingPage: React.FC = () => {
-  const { pages, profile, upgradeToPro } = useApp();
+  const { profile, updateProfilePlan } = useApp();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+  const [upgrading, setUpgrading] = useState(false);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
   const isPro = profile?.plan === 'pro';
 
-  const handleUpgrade = () => {
-    upgradeToPro();
+  const handleUpgrade = async () => {
+    setUpgrading(true);
     try {
-      confetti({
-        particleCount: 80,
-        spread: 75,
-        origin: { y: 0.6 }
-      });
-    } catch (e) {}
-    alert('🎉 Upgraded to Pro Creator! You now have unlimited dynamic Tapframes.');
+      await updateProfilePlan('pro');
+      setSuccessNotice('Congratulations! Your account has been upgraded to ClearpathQR Pro.');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleDowngrade = async () => {
+    if (window.confirm('Are you sure you want to revert to the Free Starter Plan?')) {
+      setUpgrading(true);
+      try {
+        await updateProfilePlan('free');
+        setSuccessNotice('Your plan has been changed to Free Starter.');
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setUpgrading(false);
+      }
+    }
   };
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-5xl pb-12">
-      {/* Header with Mascot */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-[#17142B] via-[#121422] to-[#121829] border border-violet-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
+    <div className="space-y-8 animate-fade-in pb-16 w-full max-w-5xl mx-auto">
+      {/* Top Header */}
+      <div className="text-center max-w-2xl mx-auto space-y-2">
+        <span className="text-[10px] uppercase font-bold tracking-widest text-violet-600 block">
+          Simple, Transparent Creator Pricing
+        </span>
+        <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Supercharge Your Video Conversions
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-600">
+          Capture high-intent video viewers and turn passive watchers into paying customers and subscribers.
+        </p>
+
+        {/* Mascot */}
+        <div className="pt-2 flex justify-center">
           <Mascot 
             mood="celebrate" 
-            size="sm" 
-            badge="Plan Advisor" 
-            message={
-              isPro 
-                ? "You're on the Pro Creator Plan with unlimited dynamic Tapframes!" 
-                : "Free plan allows 1 dynamic Tapframe. Upgrade to Pro for unlimited links and multi-channel workspaces!"
-            } 
+            size="xs" 
+            badge="Creator Guarantee" 
+            message="No long-term contracts. 14-day money-back guarantee on all Pro plans!" 
           />
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-violet-400" />
-              <span>Subscription & Limits</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              Plan & Tapframe Limits
-            </h1>
-            <p className="text-xs text-slate-300 mt-1 max-w-lg">
-              Manage your subscription tier, billing preferences, and Tapframe capacity.
-            </p>
-          </div>
         </div>
-      </div>
 
-      {/* Current Usage Status */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-violet-950/40 via-[#121422] to-indigo-950/40 border border-violet-500/20 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <div className="text-xs text-slate-400 font-semibold mb-1">Current Active Plan</div>
-          <div className="text-2xl font-black text-white flex items-center gap-2">
-            <span>{isPro ? 'Pro Creator' : 'Free Tier'}</span>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
-              Active
+        {/* Billing Toggle */}
+        <div className="inline-flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 mt-4">
+          <button
+            type="button"
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              billingCycle === 'monthly'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Monthly Billing
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle('annual')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+              billingCycle === 'annual'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>Annual Billing</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+              Save 20%
             </span>
-          </div>
-          <div className="text-xs text-slate-400 mt-2">
-            {isPro ? 'Unlimited dynamic Tapframes enabled.' : 'Includes 1 free permanent dynamic Tapframe.'}
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs text-slate-400 font-semibold mb-1">Tapframes Used</div>
-          <div className="text-2xl font-black text-violet-300">
-            {pages.length} / {isPro ? 'Unlimited' : '1'}
-          </div>
-          <div className="w-full bg-white/5 h-2 rounded-full mt-2 overflow-hidden">
-            <div 
-              className="bg-violet-500 h-full rounded-full transition-all" 
-              style={{ width: isPro ? '35%' : `${Math.min(100, pages.length * 100)}%` }} 
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-between">
-          <div className="text-xs text-slate-400 font-semibold mb-1">Lead Storage</div>
-          <div className="text-2xl font-black text-emerald-400">Unlimited</div>
-          <div className="text-xs text-slate-400 mt-2">All opt-ins saved securely</div>
+          </button>
         </div>
       </div>
 
-      {/* Comparison Pricing Table */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Free Plan */}
-        <div className={`p-8 rounded-3xl bg-[#11131E] border flex flex-col justify-between ${!isPro ? 'border-violet-500/40' : 'border-white/5'}`}>
+      {successNotice && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 max-w-xl mx-auto shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{successNotice}</span>
+        </div>
+      )}
+
+      {/* Pricing Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto items-stretch">
+        {/* Free Starter Tier */}
+        <div className={`p-6 sm:p-8 rounded-3xl bg-white border flex flex-col justify-between relative shadow-xs transition-all ${
+          !isPro ? 'border-slate-300 ring-2 ring-slate-200' : 'border-slate-200'
+        }`}>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Free Creator</h3>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Starter Creator</span>
               {!isPro && (
-                <span className="px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-slate-300">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                   Current Plan
                 </span>
               )}
             </div>
+
             <div className="mb-4">
-              <span className="text-4xl font-black text-white">$0</span>
-              <span className="text-sm text-slate-400"> / forever</span>
+              <div className="text-3xl sm:text-4xl font-black text-slate-900">$0</div>
+              <div className="text-xs text-slate-500">Free forever. No credit card required.</div>
             </div>
-            <p className="text-xs text-slate-400 mb-6">
-              For creators testing their first video QR lead funnel.
+
+            <p className="text-xs text-slate-600 mb-6">
+              Ideal for creators testing QR lead funnels on their latest YouTube or TikTok video.
             </p>
 
-            <ul className="space-y-3 text-xs text-slate-300">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span><strong>1 Dynamic QR link</strong></span>
+            <ul className="space-y-3 text-xs text-slate-700 mb-8">
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span><strong>1 Active QR Tapframe</strong> link</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Lead capture email form</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span><strong>1 Product Destination Link</strong></span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>4K PNG & SVG export</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Lead capture (Email, Name, Phone)</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Real-time scan count</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>4K on-screen video frames (PNG)</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>CSV Lead export</span>
               </li>
             </ul>
-          </div>
-
-          <button
-            disabled={!isPro}
-            className={`mt-8 w-full py-3 rounded-xl text-xs font-bold text-center ${
-              !isPro 
-                ? 'bg-white/5 text-slate-400 cursor-not-allowed'
-                : 'bg-white/10 hover:bg-white/20 text-white cursor-pointer'
-            }`}
-          >
-            {!isPro ? 'Current Active Plan' : 'Downgrade to Free'}
-          </button>
-        </div>
-
-        {/* Pro Plan */}
-        <div className={`p-8 rounded-3xl bg-gradient-to-b from-[#1C1530] to-[#121422] border-2 flex flex-col justify-between relative shadow-2xl ${
-          isPro ? 'border-emerald-500 shadow-emerald-950/40' : 'border-violet-500 shadow-violet-950/40'
-        }`}>
-          <div className="absolute -top-3.5 right-8 px-3.5 py-1 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 text-white text-xs font-bold uppercase tracking-wider shadow">
-            {isPro ? 'Active Pro' : 'Recommended'}
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Pro Creator & Agency</h3>
-              <span className="px-3 py-1 rounded-full bg-violet-500/20 text-xs font-semibold text-violet-300 border border-violet-500/30">
-                Pro
+            {isPro ? (
+              <button
+                type="button"
+                onClick={handleDowngrade}
+                disabled={upgrading}
+                className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Switch to Free Plan
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full py-3 rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 font-bold text-xs cursor-default"
+              >
+                Active on Your Account
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Clearpath Pro Tier */}
+        <div className={`p-6 sm:p-8 rounded-3xl bg-white border flex flex-col justify-between relative shadow-xl transition-all ${
+          isPro 
+            ? 'border-violet-400 ring-2 ring-violet-500/20' 
+            : 'border-violet-500/80 shadow-violet-500/10'
+        }`}>
+          {/* Most popular badge */}
+          <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[10px] font-bold tracking-wider uppercase shadow-md">
+            Most Popular for YouTubers
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-violet-700 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Clearpath Pro</span>
               </span>
+              {isPro && (
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-violet-100 text-violet-800 border border-violet-300">
+                  Active Plan
+                </span>
+              )}
             </div>
+
             <div className="mb-4">
-              <span className="text-4xl font-black text-white">$19</span>
-              <span className="text-sm text-slate-400"> / month</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                  {billingCycle === 'annual' ? '$19' : '$24'}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">/ month</span>
+              </div>
+              <div className="text-xs text-slate-500">
+                {billingCycle === 'annual' ? 'Billed annually ($228/yr)' : 'Billed monthly, cancel anytime'}
+              </div>
             </div>
-            <p className="text-xs text-slate-300 mb-6">
-              For active YouTubers, video podcasters, agencies, and businesses.
+
+            <p className="text-xs text-slate-600 mb-6">
+              For active video creators, course sellers, and agencies running weekly campaigns.
             </p>
 
-            <ul className="space-y-3 text-xs text-slate-200">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                <span><strong>Unlimited Dynamic Tapframes & QR codes</strong></span>
+            <ul className="space-y-3 text-xs text-slate-700 mb-8">
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-violet-600 shrink-0" />
+                <span><strong>Unlimited Active QR Tapframes</strong></span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                <span><strong>Multiple channel workspaces & brands</strong></span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-violet-600 shrink-0" />
+                <span><strong>Unlimited Product Links</strong> per page</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                <span>Timestamped video moment routing</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-violet-600 shrink-0" />
+                <span>Dynamic destination routing (edit links without re-editing video)</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                <span>Geographic & device cohort analytics</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-violet-600 shrink-0" />
+                <span>Full custom branding & logo badge removal</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                <span>Remove Clearpath branding badge</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-violet-600 shrink-0" />
+                <span>Country & city-level audience analytics</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                <span>Priority 24/7 creator support</span>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-violet-600 shrink-0" />
+                <span>Automated CRM Sync (ConvertKit, Beehiiv, Mailchimp)</span>
               </li>
             </ul>
           </div>
 
-          {isPro ? (
-            <button
-              disabled
-              className="mt-8 w-full py-3.5 rounded-xl bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-sm text-center cursor-default"
-            >
-              ✓ Active Pro Plan
-            </button>
-          ) : (
-            <button
-              onClick={handleUpgrade}
-              className="mt-8 w-full py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm text-center shadow-lg shadow-violet-600/30 transition-all hover:scale-[1.02] cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Upgrade to Pro ($19/mo)</span>
-            </button>
-          )}
+          <div>
+            {isPro ? (
+              <button
+                type="button"
+                disabled
+                className="w-full py-3.5 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center gap-2 cursor-default"
+              >
+                <Check className="w-4 h-4" />
+                <span>Your Pro Subscription is Active</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleUpgrade}
+                disabled={upgrading}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+              >
+                {upgrading ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Upgrade to Clearpath Pro</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* FAQ & Trust Footer */}
+      <div className="max-w-2xl mx-auto p-6 rounded-3xl bg-white border border-slate-200/90 text-center space-y-3 shadow-xs">
+        <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-800">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Risk-Free 14-Day Money Back Guarantee</span>
+        </div>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          If you don't get at least 3x more email leads from your video QR codes in your first 14 days, we will refund 100% of your subscription instantly. No questions asked.
+        </p>
       </div>
     </div>
   );

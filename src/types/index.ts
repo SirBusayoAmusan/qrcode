@@ -99,6 +99,8 @@ export interface Lead {
   name?: string;
   phone?: string;
   source: string;
+  source_video?: string;
+  status?: string;
   referrer?: string;
   device: 'mobile' | 'desktop' | 'tablet';
   country: string;

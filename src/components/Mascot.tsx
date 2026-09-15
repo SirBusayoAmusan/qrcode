@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, X, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export type MascotMood = 'wave' | 'float' | 'celebrate' | 'curious' | 'glow' | 'idle';
+export type MascotMood = 'wave' | 'float' | 'celebrate' | 'curious' | 'glow' | 'idle' | 'idea';
 
 interface MascotProps {
   mood?: MascotMood;
@@ -136,6 +136,7 @@ export const Mascot: React.FC<MascotProps> = ({
       case 'celebrate':
         return 'animate-mascot-celebrate';
       case 'curious':
+      case 'idea':
         return 'animate-mascot-curious';
       case 'glow':
         return 'animate-mascot-glow animate-mascot-float';
@@ -145,12 +146,10 @@ export const Mascot: React.FC<MascotProps> = ({
     }
   };
 
-  // Fixed text cycling on every mascot click!
   const handleClick = () => {
     setIsWiggling(true);
     setTimeout(() => setIsWiggling(false), 900);
 
-    // Cycle to next tip
     setCurrentTipIndex((prev) => (prev + 1) % tips.length);
     setBubbleOpen(true);
 
@@ -173,11 +172,11 @@ export const Mascot: React.FC<MascotProps> = ({
       {currentMessage && bubbleOpen && (
         <div 
           onClick={handleClick}
-          className="mb-2 max-w-xs sm:max-w-sm px-3.5 py-2 rounded-2xl bg-[#141824]/95 backdrop-blur-md border border-violet-500/30 text-xs text-white shadow-xl shadow-purple-950/40 relative animate-in fade-in zoom-in-95 cursor-pointer hover:border-violet-400 transition-colors"
+          className="mb-2 max-w-xs sm:max-w-sm px-3.5 py-2 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 text-xs text-slate-900 shadow-xl shadow-slate-200/80 relative animate-in fade-in zoom-in-95 cursor-pointer hover:border-violet-300 transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-1.5 font-bold text-[11px] text-violet-300">
-              <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-1.5 font-bold text-[11px] text-violet-700">
+              <Sparkles className="w-3 h-3 text-violet-600 shrink-0" />
               <span>{badge || 'TapBot AI'}</span>
             </div>
             <button
@@ -185,24 +184,24 @@ export const Mascot: React.FC<MascotProps> = ({
                 e.stopPropagation();
                 setBubbleOpen(false);
               }}
-              className="text-slate-400 hover:text-white text-[10px]"
+              className="text-slate-400 hover:text-slate-700 text-[10px] cursor-pointer"
               title="Dismiss"
             >
               <X className="w-3 h-3" />
             </button>
           </div>
-          <p className="mt-1 text-slate-200 text-[11px] leading-relaxed">
+          <p className="mt-1 text-slate-700 text-[11px] leading-relaxed font-medium">
             {currentMessage}
           </p>
-          <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
-            <span className="text-violet-300 font-medium">Click robot for next tip →</span>
-            <span className="text-violet-400 font-mono font-bold">
+          <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+            <span className="text-violet-600 font-semibold">Click robot for next tip →</span>
+            <span className="text-violet-600 font-mono font-bold">
               {currentTipIndex + 1}/{tips.length}
             </span>
           </div>
 
           {/* Speech Bubble Pointer */}
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#141824] border-r border-b border-violet-500/30 rotate-45" />
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
         </div>
       )}
 

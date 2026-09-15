@@ -117,10 +117,10 @@ export const ChannelBrandingPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-4xl pb-12">
-      {/* Header with Mascot */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-[#17142B] via-[#121422] to-[#121829] border border-violet-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
+    <div className="space-y-6 animate-fade-in max-w-4xl pb-12 mx-auto">
+      {/* Header Banner */}
+      <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
           <Mascot 
             mood="float" 
             size="sm" 
@@ -128,22 +128,21 @@ export const ChannelBrandingPage: React.FC = () => {
             message="Your channel logo and colors automatically skin all QR code landing pages for your viewers!" 
           />
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-400 mb-1">
-              <span className="w-2 h-2 rounded-full bg-violet-400" />
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-violet-600 mb-1">
               <span>Channel Branding Settings</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
               Creator Profile & Visual Identity
             </h1>
-            <p className="text-xs text-slate-300 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               This logo, handle, and brand accent appear automatically on all your generated QR pages.
             </p>
           </div>
         </div>
 
         {savedNotice && (
-          <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 self-start md:self-auto animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4" />
+          <div className="px-3.5 py-2 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-1.5 self-start md:self-auto animate-in fade-in shadow-xs">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>Channel Settings Saved!</span>
           </div>
         )}
@@ -153,10 +152,10 @@ export const ChannelBrandingPage: React.FC = () => {
       <form onSubmit={handleSave} className="space-y-6">
         {/* Channel Selection Bar if multiple channels exist */}
         {channels.length > 1 && (
-          <div className="p-4 rounded-2xl bg-[#11131E] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="text-xs font-bold text-white">Switch Editing Channel</div>
-              <div className="text-[11px] text-slate-400">Select which channel brand you are modifying.</div>
+              <div className="text-xs font-bold text-slate-900">Switch Editing Channel</div>
+              <div className="text-[11px] text-slate-500">Select which channel brand you are modifying.</div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -174,10 +173,10 @@ export const ChannelBrandingPage: React.FC = () => {
                     setPrimaryColor(c.primary_color);
                     setDescription(c.description || '');
                   }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                     activeChannel?.id === c.id
-                      ? 'bg-violet-600/20 border-violet-500 text-white'
-                      : 'bg-[#0B0D15] border-white/5 text-slate-400 hover:text-white'
+                      ? 'bg-violet-50 border-violet-300 text-violet-800 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {c.avatar_url && <img src={c.avatar_url} alt={c.name} className="w-5 h-5 rounded-full object-cover" />}
@@ -189,23 +188,23 @@ export const ChannelBrandingPage: React.FC = () => {
         )}
 
         {/* Brand Details Card */}
-        <div className="p-6 rounded-2xl bg-[#11131E] border border-white/5 space-y-5">
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-5">
           {/* Logo Upload */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Channel Logo / Avatar <span className="text-slate-500 font-normal">(Max 10MB)</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Channel Logo / Avatar <span className="text-slate-400 font-normal">(Max 10MB)</span>
             </label>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl bg-[#0B0D15] border border-white/10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="relative shrink-0">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt={name || 'Channel Logo'}
-                    className="w-16 h-16 rounded-full object-cover ring-2 ring-violet-500 shadow-md"
+                    className="w-16 h-16 rounded-full object-cover ring-2 ring-violet-500 shadow-sm"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                  <div className="w-16 h-16 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
                     <ImageIcon className="w-7 h-7" />
                   </div>
                 )}
@@ -224,7 +223,7 @@ export const ChannelBrandingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload New Logo</span>
@@ -234,7 +233,7 @@ export const ChannelBrandingPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setAvatarUrl('')}
-                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors"
+                      className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Remove
                     </button>
@@ -250,57 +249,57 @@ export const ChannelBrandingPage: React.FC = () => {
                   value={avatarUrl.startsWith('data:') ? '' : avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
                   placeholder="https://yourbrand.com/logo.png"
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#11131E] border border-white/10 text-white text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-mono placeholder:text-slate-400 focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>
 
             {uploadError && (
-              <div className="mt-2 p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-1.5 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="mt-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                 <span>{uploadError}</span>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Channel Name *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Channel Name *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. My YouTube Channel"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Handle / Username</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Handle / Username</label>
               <input
                 type="text"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="e.g. @creator"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-mono placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm font-mono placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Subscriber Count / Proof</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Subscriber Count / Proof</label>
               <input
                 type="text"
                 value={subscriberCount}
                 onChange={(e) => setSubscriberCount(e.target.value)}
                 placeholder="e.g. 100K subscribers"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Primary Theme Color</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Primary Theme Color</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -312,27 +311,27 @@ export const ChannelBrandingPage: React.FC = () => {
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-violet-500"
+                  className="flex-1 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm font-mono focus:bg-white focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Channel Bio / Description</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Channel Bio / Description</label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="A short description of what you teach, produce, or offer..."
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D15] border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-violet-500"
+              className="w-full px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500"
             />
           </div>
 
           <div className="pt-2">
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm shadow-lg shadow-violet-600/30 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-violet-600/25 transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
             >
               <Save className="w-4 h-4" />
               <span>Save Channel Branding</span>
