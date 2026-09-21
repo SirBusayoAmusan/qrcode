@@ -1,10 +1,9 @@
 import { supabase } from './supabase'
 
 export async function signUp(email: string, password: string, fullName?: string) {
-  // Determine site redirect URL: prioritize production domain qr.clearpath.click or active host
   const redirectOrigin = window.location.origin.includes('localhost') 
     ? window.location.origin 
-    : 'https://qr.clearpath.click';
+    : window.location.origin;
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -37,10 +36,34 @@ export async function signIn(email: string, password: string) {
   return data
 }
 
+export async function resetPasswordForEmail(email: string) {
+  const redirectOrigin = window.location.origin;
+
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${redirectOrigin}/auth?type=recovery`
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function updateUserPassword(newPassword: string) {
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 export async function signInWithGoogle() {
-  const redirectOrigin = window.location.origin.includes('localhost') 
-    ? window.location.origin 
-    : 'https://qr.clearpath.click';
+  const redirectOrigin = window.location.origin;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

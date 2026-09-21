@@ -12,22 +12,34 @@ import {
   ArrowRight,
   HelpCircle,
   CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  Calendar,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Mascot } from '../components/Mascot';
+import confetti from 'canvas-confetti';
 
 export const PlanAndBillingPage: React.FC = () => {
-  const { profile, updateProfilePlan } = useApp();
+  const { profile, updateProfilePlan, trialActive, trialEndDate, userPlan } = useApp();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [upgrading, setUpgrading] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
-  const isPro = profile?.plan === 'pro';
+  const isPro = userPlan === 'pro' || profile?.plan === 'pro';
 
   const handleUpgrade = async () => {
     setUpgrading(true);
     try {
-      await updateProfilePlan('pro');
+      await updateProfilePlan('pro', billingCycle);
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.5 }
+        });
+      } catch (e) {}
       setSuccessNotice('Congratulations! Your account has been upgraded to ClearpathQR Pro.');
     } catch (err) {
       console.error(err);
@@ -37,11 +49,11 @@ export const PlanAndBillingPage: React.FC = () => {
   };
 
   const handleDowngrade = async () => {
-    if (window.confirm('Are you sure you want to revert to the Free Starter Plan?')) {
+    if (window.confirm('Are you sure you want to cancel your Pro plan and revert to Free Starter? You will not be billed.')) {
       setUpgrading(true);
       try {
         await updateProfilePlan('free');
-        setSuccessNotice('Your plan has been changed to Free Starter.');
+        setSuccessNotice('Your plan has been cancelled. Your account is on the Free Starter plan.');
       } catch (err) {
         console.error(err);
       } finally {
@@ -55,13 +67,13 @@ export const PlanAndBillingPage: React.FC = () => {
       {/* Top Header */}
       <div className="text-center max-w-2xl mx-auto space-y-2">
         <span className="text-[10px] uppercase font-bold tracking-widest text-violet-600 block">
-          Simple, Transparent Creator Pricing
+          Transparent Creator Pricing
         </span>
         <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
           Supercharge Your Video Conversions
         </h1>
         <p className="text-xs sm:text-sm text-slate-600">
-          Capture high-intent video viewers and turn passive watchers into paying customers and subscribers.
+          Capture high-intent video viewers and turn passive watchers into subscribers and customers.
         </p>
 
         {/* Mascot */}
@@ -69,12 +81,12 @@ export const PlanAndBillingPage: React.FC = () => {
           <Mascot 
             mood="celebrate" 
             size="xs" 
-            badge="Creator Guarantee" 
-            message="No long-term contracts. 14-day money-back guarantee on all Pro plans!" 
+            badge="14-Day Guarantee" 
+            message="14 days 100% free trial. Cancel anytime with 1 click before billing starts!" 
           />
         </div>
 
-        {/* Billing Toggle */}
+        {/* Billing Cycle Toggle */}
         <div className="inline-flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 mt-4">
           <button
             type="button"
@@ -85,7 +97,7 @@ export const PlanAndBillingPage: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Monthly Billing
+            Monthly Billing ($11.11/mo)
           </button>
           <button
             type="button"
@@ -96,13 +108,39 @@ export const PlanAndBillingPage: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <span>Annual Billing</span>
+            <span>Annual Billing ($99/yr)</span>
             <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-              Save 20%
+              Save 26%
             </span>
           </button>
         </div>
       </div>
+
+      {/* Active Trial Notice Banner */}
+      {trialActive && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-violet-50 border border-violet-200 text-violet-900 text-xs flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl mx-auto shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-600/20">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-slate-900 text-sm">
+                14-Day Free Trial is Active
+              </div>
+              <p className="text-slate-600 text-[11px] mt-0.5">
+                Your free access lasts until <strong>{trialEndDate ? new Date(trialEndDate).toLocaleDateString() : 'in 14 days'}</strong>. No charges will occur during your trial.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDowngrade}
+            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs whitespace-nowrap cursor-pointer shadow-xs"
+          >
+            Cancel Trial (No Charge)
+          </button>
+        </div>
+      )}
 
       {successNotice && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 max-w-xl mx-auto shadow-xs">
@@ -182,15 +220,15 @@ export const PlanAndBillingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Clearpath Pro Tier */}
+        {/* Clearpath Pro Tier ($11.11/mo or $99/yr) */}
         <div className={`p-6 sm:p-8 rounded-3xl bg-white border flex flex-col justify-between relative shadow-xl transition-all ${
           isPro 
             ? 'border-violet-400 ring-2 ring-violet-500/20' 
             : 'border-violet-500/80 shadow-violet-500/10'
         }`}>
-          {/* Most popular badge */}
+          {/* Most popular badge with savings percentage */}
           <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[10px] font-bold tracking-wider uppercase shadow-md">
-            Most Popular for YouTubers
+            {billingCycle === 'annual' ? 'Save 26% • Most Popular' : '14-Day Free Trial'}
           </div>
 
           <div>
@@ -201,7 +239,7 @@ export const PlanAndBillingPage: React.FC = () => {
               </span>
               {isPro && (
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-violet-100 text-violet-800 border border-violet-300">
-                  Active Plan
+                  {trialActive ? '14-Day Trial Active' : 'Active Plan'}
                 </span>
               )}
             </div>
@@ -209,12 +247,16 @@ export const PlanAndBillingPage: React.FC = () => {
             <div className="mb-4">
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl sm:text-4xl font-black text-slate-900">
-                  {billingCycle === 'annual' ? '$19' : '$24'}
+                  {billingCycle === 'annual' ? '$99' : '$11.11'}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">/ month</span>
+                <span className="text-xs text-slate-500 font-medium">
+                  {billingCycle === 'annual' ? '/ year' : '/ month'}
+                </span>
               </div>
-              <div className="text-xs text-slate-500">
-                {billingCycle === 'annual' ? 'Billed annually ($228/yr)' : 'Billed monthly, cancel anytime'}
+              <div className="text-xs text-emerald-700 font-semibold mt-0.5">
+                {billingCycle === 'annual' 
+                  ? 'Save $34.32 compared to monthly billing ($8.25/mo)' 
+                  : 'Billed monthly ($11.11/mo). Cancel anytime with 1 click.'}
               </div>
             </div>
 
@@ -229,7 +271,7 @@ export const PlanAndBillingPage: React.FC = () => {
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-violet-600 shrink-0" />
-                <span><strong>Unlimited Product Links</strong> per page</span>
+                <span><strong>Unlimited Product & Resource Links</strong> per page</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-violet-600 shrink-0" />
@@ -245,21 +287,26 @@ export const PlanAndBillingPage: React.FC = () => {
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-violet-600 shrink-0" />
-                <span>Automated CRM Sync (ConvertKit, Beehiiv, Mailchimp)</span>
+                <span>14-day money back guarantee</span>
               </li>
             </ul>
           </div>
 
           <div>
-            {isPro ? (
-              <button
-                type="button"
-                disabled
-                className="w-full py-3.5 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center gap-2 cursor-default"
-              >
-                <Check className="w-4 h-4" />
-                <span>Your Pro Subscription is Active</span>
-              </button>
+            {isPro && !trialActive ? (
+              <div className="space-y-2">
+                <div className="w-full py-3.5 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center gap-2 cursor-default">
+                  <Check className="w-4 h-4" />
+                  <span>Your Pro Subscription is Active</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDowngrade}
+                  className="w-full text-center text-xs text-slate-400 hover:text-rose-600 transition-colors py-1 cursor-pointer"
+                >
+                  Cancel upcoming renewal
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -271,7 +318,7 @@ export const PlanAndBillingPage: React.FC = () => {
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Upgrade to Clearpath Pro</span>
+                    <span>Start 14-Day Free Trial</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -281,15 +328,29 @@ export const PlanAndBillingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* FAQ & Trust Footer */}
-      <div className="max-w-2xl mx-auto p-6 rounded-3xl bg-white border border-slate-200/90 text-center space-y-3 shadow-xs">
-        <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-800">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Risk-Free 14-Day Money Back Guarantee</span>
+      {/* Trust & Refund Guarantee */}
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 space-y-2 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>14-Day Risk-Free Money Back Guarantee</span>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            If you are not completely satisfied with Clearpath Pro, email <a href="mailto:support@clearpathqr.com" className="text-violet-600 underline">support@clearpathqr.com</a> within 14 days of your initial charge for a 100% refund. Read our full{' '}
+            <Link to="/refund" className="text-violet-600 underline font-semibold">Refund Policy</Link>.
+          </p>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed">
-          If you don't get at least 3x more email leads from your video QR codes in your first 14 days, we will refund 100% of your subscription instantly. No questions asked.
-        </p>
+
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 space-y-2 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+            <ShieldCheck className="w-4 h-4 text-violet-600" />
+            <span>Privacy & GDPR Data Rights</span>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            We never sell your data or embed third-party ad trackers. You can request permanent data deletion anytime via our{' '}
+            <Link to="/data-deletion" className="text-violet-600 underline font-semibold">Data Deletion Request Page</Link>.
+          </p>
+        </div>
       </div>
     </div>
   );

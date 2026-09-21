@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { Channel, TapframePage, Lead, UserProfile } from '../types';
+import type { Channel, TapframePage, Lead, UserProfile, DataDeletionRequest } from '../types';
 import { supabase } from './supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -12,8 +12,12 @@ interface AppContextType {
   leads: Lead[];
   isLoading: boolean;
   canCreatePage: boolean;
-  upgradeToPro: () => void;
-  updateProfilePlan: (plan: 'free' | 'pro') => Promise<void>;
+  userPlan: 'free' | 'pro';
+  trialActive: boolean;
+  trialEndDate: string | null;
+  upgradeToPro: (billingCycle?: 'monthly' | 'annual') => void;
+  startFreeTrial: (billingCycle?: 'monthly' | 'annual') => Promise<void>;
+  updateProfilePlan: (plan: 'free' | 'pro', billingCycle?: 'monthly' | 'annual') => Promise<void>;
   setActiveChannel: (channel: Channel) => void;
   createChannel: (channelData: Omit<Channel, 'id' | 'user_id' | 'created_at'>) => Promise<Channel>;
   updateChannel: (channelId: string, updates: Partial<Channel>) => Promise<void>;
@@ -24,6 +28,7 @@ interface AppContextType {
   recordScan: (pageId: string) => Promise<void>;
   recordClick: (pageId: string) => Promise<void>;
   refreshData: () => Promise<void>;
+  submitDataDeletionRequest: (email: string, reason?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -35,7 +40,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pages, setPages] = useState<TapframePage[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+  const [trialActive, setTrialActive] = useState<boolean>(false);
+  const [trialStartDate, setTrialStartDate] = useState<string | null>(null);
+  const [trialEndDate, setTrialEndDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Default guest channel so first-time creators can create immediately
+  const defaultGuestChannel: Channel = {
+    id: 'guest-ch-1',
+    user_id: 'guest',
+    name: 'My Channel',
+    handle: '@creator',
+    platform: 'youtube',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    primary_color: '#8B5CF6',
+    created_at: new Date().toISOString(),
+  };
 
   // Local storage caching helpers scoped to user id
   const loadFromStorage = useCallback((uid: string) => {
@@ -44,49 +65,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const savedPages = localStorage.getItem(`clearpath_pages_${uid}`);
       const savedLeads = localStorage.getItem(`clearpath_leads_${uid}`);
       const savedPlan = localStorage.getItem(`clearpath_plan_${uid}`);
+      const savedCycle = localStorage.getItem(`clearpath_cycle_${uid}`);
+      const savedTrial = localStorage.getItem(`clearpath_trial_${uid}`);
       const savedActiveChannel = localStorage.getItem(`clearpath_active_channel_${uid}`);
 
       if (savedChannels) {
         const parsed = JSON.parse(savedChannels);
         if (Array.isArray(parsed) && parsed.length > 0) setChannels(parsed);
+      } else {
+        setChannels([defaultGuestChannel]);
       }
+
       if (savedPages) {
         const parsed = JSON.parse(savedPages);
         if (Array.isArray(parsed)) setPages(parsed);
       }
+
       if (savedLeads) {
         const parsed = JSON.parse(savedLeads);
         if (Array.isArray(parsed)) setLeads(parsed);
       }
+
       if (savedPlan === 'pro' || savedPlan === 'free') setUserPlan(savedPlan);
+      if (savedCycle === 'monthly' || savedCycle === 'annual') setBillingCycle(savedCycle);
+      
+      if (savedTrial) {
+        const parsedTrial = JSON.parse(savedTrial);
+        setTrialActive(parsedTrial.active ?? false);
+        setTrialStartDate(parsedTrial.startDate ?? null);
+        setTrialEndDate(parsedTrial.endDate ?? null);
+      }
+
       if (savedActiveChannel) setActiveChannelId(savedActiveChannel);
     } catch (e) {
       console.warn('Error reading scoped localStorage:', e);
     }
   }, []);
 
-  const saveToStorage = useCallback((uid: string, newChannels: Channel[], newPages: TapframePage[], newLeads: Lead[], plan: 'free' | 'pro') => {
+  const saveToStorage = useCallback((
+    uid: string, 
+    newChannels: Channel[], 
+    newPages: TapframePage[], 
+    newLeads: Lead[], 
+    plan: 'free' | 'pro',
+    cycle: 'monthly' | 'annual' = billingCycle,
+    trial?: { active: boolean; startDate: string | null; endDate: string | null }
+  ) => {
     try {
       localStorage.setItem(`clearpath_channels_${uid}`, JSON.stringify(newChannels));
       localStorage.setItem(`clearpath_pages_${uid}`, JSON.stringify(newPages));
       localStorage.setItem(`clearpath_leads_${uid}`, JSON.stringify(newLeads));
       localStorage.setItem(`clearpath_plan_${uid}`, plan);
+      localStorage.setItem(`clearpath_cycle_${uid}`, cycle);
+      if (trial) {
+        localStorage.setItem(`clearpath_trial_${uid}`, JSON.stringify(trial));
+      }
     } catch (e) {
       console.warn('Error saving to scoped localStorage:', e);
     }
-  }, []);
+  }, [billingCycle]);
 
   const clearAllUserData = () => {
-    setChannels([]);
+    setChannels([defaultGuestChannel]);
     setPages([]);
     setLeads([]);
     setUserPlan('free');
+    setTrialActive(false);
+    setTrialStartDate(null);
+    setTrialEndDate(null);
     setActiveChannelId('');
-    localStorage.removeItem('clearpath_channels_v2');
-    localStorage.removeItem('clearpath_pages_v2');
-    localStorage.removeItem('clearpath_leads_v2');
-    localStorage.removeItem('clearpath_user_plan');
-    localStorage.removeItem('clearpath_active_channel_id_v2');
   };
 
   // Full 360 sync across workflows, public.pages, and public.leads
@@ -102,13 +149,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .eq('user_id', userId)
         .maybeSingle();
 
-      // 3. Fetch public.pages table (contains live real-time scan and lead counts!)
+      // 3. Fetch public.pages table
       const { data: pagesRows } = await supabase
         .from('pages')
         .select('*')
         .eq('user_id', userId);
 
-      // 4. Fetch public.leads table (contains actual leads captured by external mobile scans!)
+      // 4. Fetch public.leads table
       const { data: leadsRows } = await supabase
         .from('leads')
         .select('*')
@@ -118,21 +165,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let mergedPages: TapframePage[] = [];
       let mergedLeads: Lead[] = [];
       let plan: 'free' | 'pro' = 'free';
+      let cycle: 'monthly' | 'annual' = 'annual';
+      let trial = { active: false, startDate: null as string | null, endDate: null as string | null };
 
       if (wfData && wfData.data) {
-        const payload = wfData.data as { channels?: Channel[]; pages?: TapframePage[]; leads?: Lead[]; plan?: 'free' | 'pro' };
+        const payload = wfData.data as any;
         if (payload.channels && payload.channels.length > 0) mergedChannels = payload.channels;
         if (payload.pages && payload.pages.length > 0) mergedPages = payload.pages;
         if (payload.leads && payload.leads.length > 0) mergedLeads = payload.leads;
         if (payload.plan) plan = payload.plan;
+        if (payload.billing_cycle) cycle = payload.billing_cycle;
+        if (payload.trial) trial = payload.trial;
       }
 
-      // If pages exist in public.pages, synchronize live stats & recover channel if needed
+      // Merge remote pages
       if (pagesRows && pagesRows.length > 0) {
         const remotePagesMap = new Map<string, any>();
         pagesRows.forEach(r => remotePagesMap.set(r.id, r));
 
-        // Merge or populate pages
         if (mergedPages.length === 0) {
           mergedPages = pagesRows.map(r => ({
             id: r.id,
@@ -173,7 +223,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
 
-        // Recover channel information from page channel_data if channels array was empty
         if (mergedChannels.length === 0) {
           for (const r of pagesRows) {
             if (r.channel_data && r.channel_data.name) {
@@ -184,7 +233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // Merge real-time leads from public.leads table
+      // Merge remote leads
       if (leadsRows && leadsRows.length > 0) {
         const userPageIds = new Set(mergedPages.map(p => p.id));
         const userChannelIds = new Set(mergedChannels.map(c => c.id));
@@ -208,7 +257,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             created_at: l.created_at,
           }));
 
-        // Deduplicate leads by id/email+created_at
         const leadMap = new Map<string, Lead>();
         [...relevantLeads, ...mergedLeads].forEach(l => {
           if (!leadMap.has(l.id)) leadMap.set(l.id, l);
@@ -219,19 +267,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (mergedChannels.length > 0) {
         setChannels(mergedChannels);
         if (!activeChannelId) setActiveChannelId(mergedChannels[0].id);
+      } else {
+        setChannels([defaultGuestChannel]);
       }
+
       setPages(mergedPages);
       setLeads(mergedLeads);
       setUserPlan(plan);
+      setBillingCycle(cycle);
+      setTrialActive(trial.active);
+      setTrialStartDate(trial.startDate);
+      setTrialEndDate(trial.endDate);
 
-      saveToStorage(userId, mergedChannels, mergedPages, mergedLeads, plan);
+      saveToStorage(userId, mergedChannels, mergedPages, mergedLeads, plan, cycle, trial);
     } catch (err) {
       console.warn('Supabase sync notice:', err);
       loadFromStorage(userId);
     }
   };
 
-  // Handle Supabase Auth & Realtime Subscriptions
+  // Initial load
   useEffect(() => {
     let mounted = true;
 
@@ -244,11 +299,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (currentUser) {
             await syncWithSupabase(currentUser.id);
           } else {
-            clearAllUserData();
+            loadFromStorage('guest');
           }
         }
       } catch (err) {
         console.warn('Supabase auth getSession notice:', err);
+        loadFromStorage('guest');
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -262,73 +318,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser(currentUser);
 
       if (event === 'SIGNED_OUT' || !currentUser) {
-        clearAllUserData();
+        loadFromStorage('guest');
       } else if (currentUser) {
         await syncWithSupabase(currentUser.id);
       }
     });
 
-    // Realtime listener for instant lead arrivals & scan updates
-    const realtimeChannel = supabase
-      .channel('clearpath-db-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'leads' },
-        (payload: any) => {
-          if (!mounted) return;
-          const newLead = payload.new as Lead;
-          if (newLead && newLead.email) {
-            setLeads(prev => {
-              if (prev.some(l => l.id === newLead.id)) return prev;
-              return [newLead, ...prev];
-            });
-
-            // Increment page lead count
-            setPages(prev => prev.map(p => {
-              if (p.id === newLead.page_id) {
-                return { ...p, total_leads: (p.total_leads || 0) + 1 };
-              }
-              return p;
-            }));
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'pages' },
-        (payload: any) => {
-          if (!mounted) return;
-          const updatedPage = payload.new;
-          if (updatedPage && updatedPage.id) {
-            setPages(prev => prev.map(p => {
-              if (p.id === updatedPage.id) {
-                return {
-                  ...p,
-                  total_scans: updatedPage.total_scans ?? p.total_scans,
-                  total_leads: updatedPage.total_leads ?? p.total_leads,
-                  total_clicks: updatedPage.total_clicks ?? p.total_clicks,
-                };
-              }
-              return p;
-            }));
-          }
-        }
-      )
-      .subscribe();
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      supabase.removeChannel(realtimeChannel);
     };
   }, []);
 
-  const persistToRemote = async (newChannels: Channel[], newPages: TapframePage[], newLeads: Lead[], plan: 'free' | 'pro' = userPlan) => {
+  const persistToRemote = async (
+    newChannels: Channel[], 
+    newPages: TapframePage[], 
+    newLeads: Lead[], 
+    plan: 'free' | 'pro' = userPlan,
+    cycle: 'monthly' | 'annual' = billingCycle,
+    trialState = { active: trialActive, startDate: trialStartDate, endDate: trialEndDate }
+  ) => {
     const currentUid = user?.id || 'guest';
-    saveToStorage(currentUid, newChannels, newPages, newLeads, plan);
+    saveToStorage(currentUid, newChannels, newPages, newLeads, plan, cycle, trialState);
 
     try {
-      // 1. If signed in, update workflow in Supabase
       if (user) {
         await supabase
           .from('workflows')
@@ -337,14 +350,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               user_id: user.id,
               title: 'ClearpathQR User Workflow',
               current_step: 4,
-              data: { channels: newChannels, pages: newPages, leads: newLeads, plan },
+              data: { 
+                channels: newChannels, 
+                pages: newPages, 
+                leads: newLeads, 
+                plan, 
+                billing_cycle: cycle,
+                trial: trialState 
+              },
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' }
           );
       }
 
-      // 2. Also sync every page to public.pages so external mobile scans can resolve instantly without auth!
       for (const p of newPages) {
         const chan = newChannels.find(c => c.id === p.channel_id) || newChannels[0];
         try {
@@ -371,16 +390,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               total_clicks: p.total_clicks || 0,
               updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
-        } catch (pageErr) {
-          // Silent fallback
-        }
+        } catch (pageErr) {}
       }
     } catch (err) {
       console.warn('Auto-save to Supabase notice:', err);
     }
   };
 
-  const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0] || null;
+  const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0] || defaultGuestChannel;
 
   const setActiveChannel = (channel: Channel) => {
     setActiveChannelId(channel.id);
@@ -389,33 +406,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const upgradeToPro = () => {
+  const upgradeToPro = (cycle: 'monthly' | 'annual' = 'annual') => {
     setUserPlan('pro');
-    persistToRemote(channels, pages, leads, 'pro');
+    setBillingCycle(cycle);
+    persistToRemote(channels, pages, leads, 'pro', cycle);
   };
 
-  const updateProfilePlan = async (plan: 'free' | 'pro') => {
+  const startFreeTrial = async (cycle: 'monthly' | 'annual' = 'annual') => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const startIso = now.toISOString();
+    const endIso = end.toISOString();
+
+    setUserPlan('pro');
+    setBillingCycle(cycle);
+    setTrialActive(true);
+    setTrialStartDate(startIso);
+    setTrialEndDate(endIso);
+
+    const trialObj = { active: true, startDate: startIso, endDate: endIso };
+    await persistToRemote(channels, pages, leads, 'pro', cycle, trialObj);
+  };
+
+  const updateProfilePlan = async (plan: 'free' | 'pro', cycle: 'monthly' | 'annual' = billingCycle) => {
     setUserPlan(plan);
-    await persistToRemote(channels, pages, leads, plan);
+    setBillingCycle(cycle);
+    if (plan === 'free') {
+      setTrialActive(false);
+      await persistToRemote(channels, pages, leads, 'free', cycle, { active: false, startDate: null, endDate: null });
+    } else {
+      await persistToRemote(channels, pages, leads, 'pro', cycle);
+    }
   };
 
-  // Scoped to active channel pages (Never checks orphaned pages from other users or channels)
   const activeChannelPages = pages.filter(p => {
     if (!activeChannel) return true;
     return p.channel_id === activeChannel.id;
   });
 
-  // Requirement: Free tier limit strictly to 1 active Tapframe per active workspace
   const canCreatePage = userPlan === 'pro' || activeChannelPages.length < 1;
 
   const createChannel = async (channelData: Omit<Channel, 'id' | 'user_id' | 'created_at'>): Promise<Channel> => {
     const newChan: Channel = {
       ...channelData,
       id: 'ch-' + Math.random().toString(36).substring(2, 9),
-      user_id: user?.id || 'demo-user',
+      user_id: user?.id || 'guest',
       created_at: new Date().toISOString(),
     };
-    const updated = [...channels, newChan];
+    const updated = [...channels.filter(c => c.id !== 'guest-ch-1'), newChan];
     setChannels(updated);
     setActiveChannelId(newChan.id);
     await persistToRemote(updated, pages, leads);
@@ -429,25 +467,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createPage = async (pageData: Partial<TapframePage>): Promise<TapframePage> => {
-    if (!canCreatePage) {
-      throw new Error('FREE_TIER_LIMIT_REACHED');
-    }
-
-    const channel = activeChannel || channels[0];
+    const channel = activeChannel || channels[0] || defaultGuestChannel;
     const newPage: TapframePage = {
       id: 'page-' + Math.random().toString(36).substring(2, 9),
-      channel_id: channel?.id || 'default-channel',
-      user_id: user?.id || 'demo-user',
-      title: pageData.title || 'Untitled QR Page',
+      channel_id: channel.id,
+      user_id: user?.id || 'guest',
+      title: pageData.title || 'My Video Resource Page',
       slug: pageData.slug || ('p-' + Math.random().toString(36).substring(2, 7)),
-      campaign_name: pageData.campaign_name || `${channel?.name || 'Main'} Campaign`,
+      campaign_name: pageData.campaign_name || `${channel.name} Campaign`,
       destination_type: pageData.destination_type || 'landing_page',
       external_url: pageData.external_url || '',
       status: pageData.status || 'active',
-      headline: pageData.headline || 'Welcome to our exclusive community offer!',
-      subheadline: pageData.subheadline || 'Drop your email below to get the free downloadable guide and resources.',
-      badge_text: pageData.badge_text || '✨ Exclusive Viewer Offer',
-      hero_image_url: pageData.hero_image_url || '',
+      headline: pageData.headline || 'Get My Free Resource Kit',
+      subheadline: pageData.subheadline || 'Drop your email below to unlock instant access to all video tools.',
+      badge_text: pageData.badge_text || '',
       product_links: pageData.product_links || [],
       lead_capture_fields: pageData.lead_capture_fields || {
         collect_email: true,
@@ -455,15 +488,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         collect_phone: false,
       },
       lead_capture_enabled: pageData.lead_capture_enabled !== undefined ? pageData.lead_capture_enabled : true,
-      lead_capture_placeholder: pageData.lead_capture_placeholder || 'Enter your email address...',
-      lead_capture_button_text: pageData.lead_capture_button_text || 'Get Instant Access',
+      lead_capture_button_text: pageData.lead_capture_button_text || 'Get Access',
       lead_magnet_title: pageData.lead_magnet_title || 'Free Strategy Guide & Template',
       lead_magnet_download_url: pageData.lead_magnet_download_url || '',
       cta_buttons: pageData.cta_buttons || [],
-      social_links: pageData.social_links || [],
       custom_theme: pageData.custom_theme || {
         background_color: '#0B0D17',
-        accent_color: channel?.primary_color || '#8B5CF6',
+        accent_color: channel.primary_color || '#8B5CF6',
         text_color: '#FFFFFF',
         card_style: 'glass',
         qr_style: {
@@ -473,10 +504,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           callout_text: 'Scan the QR code to access the free resources',
         }
       },
-      associated_content: pageData.associated_content || {
-        type: 'youtube',
-        title: 'Latest Video',
-      },
       total_scans: 0,
       unique_visitors: 0,
       total_clicks: 0,
@@ -485,7 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updated_at: new Date().toISOString(),
     };
 
-    const updated = [newPage, ...pages];
+    const updated = [newPage, ...pages.filter(p => p.id !== newPage.id)];
     setPages(updated);
     await persistToRemote(channels, updated, leads);
     return newPage;
@@ -502,7 +529,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPages(updated);
     await persistToRemote(channels, updated, leads);
 
-    // Also remove from Supabase public.pages
     try {
       await supabase.from('pages').delete().eq('id', pageId);
     } catch (e) {}
@@ -559,12 +585,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const submitDataDeletionRequest = async (email: string, reason?: string) => {
+    try {
+      const deletionReqs = JSON.parse(localStorage.getItem('clearpath_deletion_requests') || '[]');
+      deletionReqs.push({
+        id: 'del-' + Date.now(),
+        email: email.trim(),
+        reason: reason?.trim() || 'User requested GDPR/CCPA data erasure',
+        status: 'submitted',
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem('clearpath_deletion_requests', JSON.stringify(deletionReqs));
+    } catch (e) {
+      console.warn('Data deletion store notice:', e);
+    }
+  };
+
   const profile: UserProfile = {
-    id: user?.id || 'demo-user-1',
+    id: user?.id || 'guest-user',
     email: user?.email || '',
     full_name: user?.user_metadata?.full_name || '',
     avatar_url: activeChannel?.avatar_url || '',
     plan: userPlan,
+    billing_cycle: billingCycle,
+    trial_active: trialActive,
+    trial_start_date: trialStartDate || undefined,
+    trial_end_date: trialEndDate || undefined,
     channels,
   };
 
@@ -579,7 +625,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         leads,
         isLoading,
         canCreatePage,
+        userPlan,
+        trialActive,
+        trialEndDate,
         upgradeToPro,
+        startFreeTrial,
         updateProfilePlan,
         setActiveChannel,
         createChannel,
@@ -591,6 +641,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordScan,
         recordClick,
         refreshData,
+        submitDataDeletionRequest,
       }}
     >
       {children}

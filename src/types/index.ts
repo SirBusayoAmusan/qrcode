@@ -114,5 +114,17 @@ export interface UserProfile {
   full_name?: string;
   avatar_url?: string;
   plan: 'free' | 'pro';
+  billing_cycle?: 'monthly' | 'annual';
+  trial_active?: boolean;
+  trial_start_date?: string;
+  trial_end_date?: string;
   channels: Channel[];
+}
+
+export interface DataDeletionRequest {
+  id: string;
+  email: string;
+  reason?: string;
+  status: 'submitted' | 'processing' | 'completed';
+  created_at: string;
 }

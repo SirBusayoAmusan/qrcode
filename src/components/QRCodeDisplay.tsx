@@ -8,7 +8,7 @@ interface QRCodeDisplayProps {
   size?: number;
   showCardWrapper?: boolean;
   isThumbnail?: boolean;
-  onDownload?: () => void;
+  onDownloadIntercept?: (triggerActualDownload: () => void) => void;
 }
 
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
@@ -16,6 +16,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   size = 220,
   showCardWrapper = true,
   isThumbnail = false,
+  onDownloadIntercept,
 }) => {
   const [copied, setCopied] = React.useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -47,7 +48,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const downloadPNG = async () => {
+  const performActualPNGDownload = () => {
     const canvas = document.createElement('canvas');
     const exportWidth = 1080;
     const exportHeight = 1080;
@@ -71,7 +72,6 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
 
       const filename = getCleanFilename('png');
 
-      // Native mobile Web Share API for saving to camera roll / files
       if (navigator.canShare && canvas.toBlob) {
         canvas.toBlob(async (blob) => {
           if (blob) {
@@ -84,13 +84,10 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
                   text: `ClearpathQR code for ${page.headline || page.title}`,
                 });
                 return;
-              } catch (err) {
-                // User cancelled or fallback to download
-              }
+              } catch (err) {}
             }
           }
 
-          // Fallback direct download
           const a = document.createElement('a');
           a.download = filename;
           a.href = canvas.toDataURL('image/png');
@@ -103,6 +100,14 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         a.click();
       }
     };
+  };
+
+  const handleDownloadClick = () => {
+    if (onDownloadIntercept) {
+      onDownloadIntercept(performActualPNGDownload);
+    } else {
+      performActualPNGDownload();
+    }
   };
 
   const downloadSVG = () => {
@@ -118,10 +123,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // If thumbnail mode, render ONLY the crisp QR code inside a neat container
   if (isThumbnail) {
     return (
-      <div className="w-full h-full bg-white p-1.5 rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
+      <div className="w-full h-full bg-white p-1.5 rounded-xl flex items-center justify-center overflow-hidden shadow-xs">
         <QRCodeSVG
           value={publicUrl}
           size={size}
@@ -138,7 +142,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     if (qrConfig.frame_style === 'gradient_border') {
       return (
         <div className="flex flex-col items-center max-w-full">
-          <div className="p-2.5 rounded-3xl bg-gradient-to-tr from-pink-500 via-purple-500 to-amber-300 shadow-2xl">
+          <div className="p-2.5 rounded-3xl bg-gradient-to-tr from-pink-500 via-purple-500 to-amber-300 shadow-xl">
             <div className="bg-white p-3 sm:p-4 rounded-2xl flex items-center justify-center">
               <QRCodeSVG
                 value={publicUrl}
@@ -151,7 +155,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
             </div>
           </div>
           {qrConfig.callout_text && (
-            <div className="mt-3 max-w-xs px-3.5 py-2 rounded-xl bg-black/85 backdrop-blur-md text-white text-xs font-medium text-center border border-white/10 shadow-lg leading-snug">
+            <div className="mt-3 max-w-xs px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium text-center border border-slate-800 shadow-md leading-snug">
               {qrConfig.callout_text}
             </div>
           )}
@@ -162,7 +166,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     if (qrConfig.frame_style === 'dark_pill') {
       return (
         <div className="flex flex-col items-center max-w-full">
-          <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-2xl flex items-center justify-center border border-slate-100">
+          <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-xl flex items-center justify-center border border-slate-100">
             <QRCodeSVG
               value={publicUrl}
               size={size}
@@ -173,7 +177,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
             />
           </div>
           {qrConfig.callout_text && (
-            <div className="mt-3 max-w-xs px-3.5 py-2 rounded-xl bg-[#090B10]/95 backdrop-blur-md text-white text-xs font-medium text-center border border-white/10 shadow-xl leading-snug">
+            <div className="mt-3 max-w-xs px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium text-center border border-slate-800 shadow-md leading-snug">
               {qrConfig.callout_text}
             </div>
           )}
@@ -181,10 +185,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       );
     }
 
-    // Standard Clean
     return (
       <div className="flex flex-col items-center max-w-full">
-        <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-xl flex items-center justify-center border border-slate-200/50">
+        <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-md flex items-center justify-center border border-slate-200">
           <QRCodeSVG
             value={publicUrl}
             size={size}
@@ -195,7 +198,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
           />
         </div>
         {qrConfig.callout_text && (
-          <p className="mt-2.5 text-xs text-slate-300 text-center max-w-xs font-medium">
+          <p className="mt-2.5 text-xs text-slate-700 text-center max-w-xs font-medium">
             {qrConfig.callout_text}
           </p>
         )}
@@ -204,7 +207,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   };
 
   return (
-    <div className={showCardWrapper ? 'p-5 sm:p-6 rounded-2xl bg-[#12141D] border border-white/10 flex flex-col items-center justify-center w-full overflow-hidden' : 'w-full'}>
+    <div className={showCardWrapper ? 'p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 flex flex-col items-center justify-center w-full overflow-hidden shadow-xs' : 'w-full'}>
       {/* Hidden high-res canvas for exports */}
       <div ref={canvasRef} className="hidden">
         <QRCodeCanvas value={publicUrl} size={700} level="H" />
@@ -217,30 +220,30 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       </div>
 
       {showCardWrapper && (
-        <div className="w-full mt-5 pt-4 border-t border-white/10 flex flex-col gap-3">
-          <div className="flex items-center justify-between text-xs text-slate-400 px-1 font-mono break-all gap-2">
+        <div className="w-full mt-5 pt-4 border-t border-slate-100 flex flex-col gap-3">
+          <div className="flex items-center justify-between text-xs text-slate-500 px-1 font-mono break-all gap-2">
             <span className="truncate pr-1">{publicUrl}</span>
             <button
               onClick={copyUrl}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1 shrink-0 cursor-pointer text-[11px] font-semibold"
               title="Copy link"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button
-              onClick={downloadPNG}
-              className="px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-violet-600/20 cursor-pointer"
+              onClick={handleDownloadClick}
+              className="px-3 py-2 text-xs font-bold rounded-xl bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center gap-1.5 transition-all shadow-md shadow-violet-600/20 cursor-pointer hover:scale-105"
             >
               <Download className="w-3.5 h-3.5" />
               Download PNG
             </button>
             <button
               onClick={downloadSVG}
-              className="px-3 py-2 text-xs font-semibold rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               Download SVG
@@ -251,7 +254,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
             href={publicUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full text-center text-xs text-violet-400 hover:text-violet-300 py-1 font-medium inline-flex items-center justify-center gap-1 transition-colors"
+            className="w-full text-center text-xs text-violet-600 hover:text-violet-700 py-1 font-semibold inline-flex items-center justify-center gap-1 transition-colors"
           >
             <span>Test live destination preview</span>
             <ExternalLink className="w-3 h-3" />

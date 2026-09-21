@@ -12,6 +12,12 @@ import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { ChannelBrandingPage } from './pages/ChannelBrandingPage';
 import { PlanAndBillingPage } from './pages/PlanAndBillingPage';
 import { PublicTapframePage } from './pages/PublicTapframePage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsPage } from './pages/TermsPage';
+import { RefundPolicyPage } from './pages/RefundPolicyPage';
+import { CookiePolicyPage } from './pages/CookiePolicyPage';
+import { DataDeletionPage } from './pages/DataDeletionPage';
+import { CookieBanner } from './components/CookieBanner';
 
 export function App() {
   return (
@@ -27,8 +33,11 @@ export function App() {
           {/* Authentication (Sign in / Sign up) */}
           <Route path="/auth" element={<AuthPage />} />
 
-          {/* Channel Setup Wizard (Step 1) */}
+          {/* Channel Setup Wizard */}
           <Route path="/channel-setup" element={<ChannelSetupPage />} />
+
+          {/* Direct Tapframe Creator Studio (Works for both Guests & Signed-In Users) */}
+          <Route path="/create" element={<DashboardLayout><PageEditor /></DashboardLayout>} />
 
           {/* Dashboard Hub Layout Routes */}
           <Route path="/dashboard" element={<DashboardLayout><VideoPagesDashboard /></DashboardLayout>} />
@@ -39,9 +48,19 @@ export function App() {
           <Route path="/dashboard/channel" element={<DashboardLayout><ChannelBrandingPage /></DashboardLayout>} />
           <Route path="/dashboard/plan" element={<DashboardLayout><PlanAndBillingPage /></DashboardLayout>} />
 
+          {/* Legal & Compliance Routes */}
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/refund" element={<RefundPolicyPage />} />
+          <Route path="/cookies" element={<CookiePolicyPage />} />
+          <Route path="/data-deletion" element={<DataDeletionPage />} />
+
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* Global Cookie Banner */}
+        <CookieBanner />
       </BrowserRouter>
     </AppProvider>
   );
