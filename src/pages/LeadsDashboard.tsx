@@ -7,27 +7,18 @@ import {
   Mail, 
   Phone, 
   Calendar, 
-  FileSpreadsheet, 
   Tv, 
-  ExternalLink,
   ChevronDown,
   Sparkles,
-  Lock,
-  Globe,
-  Tag,
-  FolderOpen
+  Tag
 } from 'lucide-react';
 import { Mascot } from '../components/Mascot';
-import { UpgradePaywallModal } from '../components/UpgradePaywallModal';
 
 export const LeadsDashboard: React.FC = () => {
-  const { leads, pages, activeChannel, profile } = useApp();
+  const { leads, pages, activeChannel } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPageId, setFilterPageId] = useState<string>('all');
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
-  const [showPaywallModal, setShowPaywallModal] = useState(false);
-
-  const isPro = profile?.plan === 'pro';
 
   // Scoped leads filtering strictly to the active channel
   const activeChannelPageIds = new Set(
@@ -100,7 +91,7 @@ export const LeadsDashboard: React.FC = () => {
   const channelPages = pages.filter(p => !activeChannel || p.channel_id === activeChannel.id);
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto px-2 sm:px-4">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -125,9 +116,9 @@ export const LeadsDashboard: React.FC = () => {
             type="button"
             onClick={handleExportCSV}
             disabled={filteredLeads.length === 0}
-            className="px-4 py-2.5 rounded-2xl apple-glass hover:bg-slate-50 text-slate-800 font-semibold text-xs flex items-center gap-2 transition-all shadow-xs disabled:opacity-40 cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-violet-600/20 disabled:opacity-40 cursor-pointer"
           >
-            <Download className="w-4 h-4 text-slate-500" />
+            <Download className="w-4 h-4" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -139,24 +130,25 @@ export const LeadsDashboard: React.FC = () => {
           <Mascot mood="celebrate" size="xs" />
           <div>
             <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
-              <span>Smart TV & On-Screen Leads convert directly to owned subscribers!</span>
+              <span>On-Screen Leads convert directly to your owned audience!</span>
               <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">CAN-SPAM Compliant</span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Sync these leads to ConvertKit, Mailchimp, Beehiiv, or export anytime. All emails include standard 1-click unsubscribe mechanisms.
+              Export your collected contacts to CSV anytime to import into your favorite newsletter or CRM platform.
             </p>
           </div>
         </div>
 
-        {!isPro && (
-          <button
-            onClick={() => setShowPaywallModal(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-xs"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Automate CRM Sync</span>
-          </button>
-        )}
+        {/* Replaced 'Automate CRM Sync' with 'Export CSV' */}
+        <button
+          type="button"
+          onClick={handleExportCSV}
+          disabled={filteredLeads.length === 0}
+          className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-xs disabled:opacity-50"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Export CSV</span>
+        </button>
       </div>
 
       {/* Campaign Grouping & Filter Bar */}
@@ -216,7 +208,7 @@ export const LeadsDashboard: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
               <Users className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-slate-800">No leads found</h3>
+            <h3 className="text-sm font-bold text-slate-800">No leads captured yet</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
               {searchTerm || filterPageId !== 'all' || selectedCampaign !== 'all'
                 ? 'Try adjusting your search query or campaign filter selection.'
@@ -291,13 +283,6 @@ export const LeadsDashboard: React.FC = () => {
           </div>
         )}
       </div>
-
-      <UpgradePaywallModal
-        isOpen={showPaywallModal}
-        onClose={() => setShowPaywallModal(false)}
-        featureTitle="Automated CRM & Webhook Integration"
-        featureDescription="Automatically send leads directly to ConvertKit, Mailchimp, Zapier, Beehiiv, or Google Sheets the moment viewers scan."
-      />
     </div>
   );
 };

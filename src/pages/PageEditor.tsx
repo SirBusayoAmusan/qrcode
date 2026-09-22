@@ -26,6 +26,8 @@ import {
   Download,
   Palette,
   User,
+  Phone,
+  Mail,
   ShieldCheck,
   Video,
   Monitor
@@ -94,7 +96,6 @@ const compressImageFile = (file: File): Promise<string> => {
   });
 };
 
-// Preset Luxury Apple-Style Colors
 const PRESET_COLORS = [
   { name: 'Violet', value: '#8B5CF6', ring: 'ring-violet-500' },
   { name: 'Indigo', value: '#6366F1', ring: 'ring-indigo-500' },
@@ -115,32 +116,32 @@ export const PageEditor: React.FC = () => {
   const existingPage = isEditing ? pages.find(p => p.id === id) : null;
   const isPro = profile?.plan === 'pro' || trialActive;
 
-  // Flow Step: 1 = Channel Identity, 2 = Page Content, 3 = Dedicated 4K Download Screen
+  // Stepper: 1 = Creator Branding, 2 = Page Content, 3 = Dedicated 4K Download
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(isEditing ? 2 : 1);
 
-  // STEP 1: Creator Branding State
-  const [handle, setHandle] = useState(activeChannel?.handle || '@creator');
+  // STEP 1: Creator Branding (Strictly Required Fields)
+  const [handle, setHandle] = useState(activeChannel?.handle || '');
+  const [channelName, setChannelName] = useState(activeChannel?.name || '');
   const [channelBio, setChannelBio] = useState(activeChannel?.description || '');
-  const [avatarUrl, setAvatarUrl] = useState(activeChannel?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+  const [avatarUrl, setAvatarUrl] = useState(activeChannel?.avatar_url || '');
   const [subscriberCount, setSubscriberCount] = useState(activeChannel?.subscriber_count || '');
   const [primaryColor, setPrimaryColor] = useState(activeChannel?.primary_color || '#8B5CF6');
-  const [channelName, setChannelName] = useState(activeChannel?.name || 'My Creator Channel');
 
-  // STEP 2: Mobile Page Content State (Cleaned per user requirements: Campaign & Ribbon removed)
+  // STEP 2: Mobile Page Content (Empty defaults with light placeholders, Campaign & Ribbon removed)
   const [slug, setSlug] = useState(() => {
     if (existingPage?.slug) return existingPage.slug;
     const allSlugs = pages.map(p => p.slug);
     return generateUniqueSlug(allSlugs);
   });
-  const [headline, setHeadline] = useState(existingPage?.headline || existingPage?.title || 'The Six Figure Wealth Guide');
-  const [subheadline, setSubheadline] = useState(existingPage?.subheadline || 'Drop your email below to get the free downloadable guide and resources.');
+  const [headline, setHeadline] = useState(existingPage?.headline || existingPage?.title || '');
+  const [subheadline, setSubheadline] = useState(existingPage?.subheadline || '');
   
-  // Product Links (Primary destination link #1)
+  // Product Links (Supports adding as many links as desired)
   const [productLinks, setProductLinks] = useState<ProductLink[]>(() => {
     if (existingPage?.product_links && existingPage.product_links.length > 0) {
       return existingPage.product_links;
     }
-    return [{ id: 'prod-1', title: 'My Digital Resource / Course', url: 'https://gumroad.com' }];
+    return [{ id: 'prod-1', title: '', url: '' }];
   });
 
   // Email Lead Capture setup
@@ -154,10 +155,10 @@ export const PageEditor: React.FC = () => {
     existingPage?.lead_capture_fields?.collect_phone || false
   );
   const [leadMagnetTitle, setLeadMagnetTitle] = useState(
-    existingPage?.lead_magnet_title || 'Free Strategy Guide & Template'
+    existingPage?.lead_magnet_title || ''
   );
   const [leadCaptureButtonText, setLeadCaptureButtonText] = useState(
-    existingPage?.lead_capture_button_text || 'Get Access'
+    existingPage?.lead_capture_button_text || ''
   );
 
   const [saving, setSaving] = useState(false);
@@ -166,13 +167,23 @@ export const PageEditor: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [editorGuideTab, setEditorGuideTab] = useState<'premiere' | 'finalcut' | 'obs' | 'canva'>('premiere');
 
-  // Handle Logo Upload with automatic canvas compression
+  // Step 1 Validation Check
+  const isStep1Valid = Boolean(
+    handle.trim() &&
+    channelName.trim() &&
+    channelBio.trim() &&
+    avatarUrl.trim() &&
+    primaryColor.trim()
+  );
+
+  // Logo upload with canvas compression
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMessage(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage('File exceeds 10MB. Please choose a smaller image.');
+      setErrorMessage('File exceeds 10MB limit. Please upload an image under 10MB.');
       return;
     }
 
@@ -186,6 +197,18 @@ export const PageEditor: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAddProductLink = () => {
+    setProductLinks([
+      ...productLinks,
+      { id: Date.now().toString(), title: '', url: '' }
+    ]);
+  };
+
+  const handleRemoveProductLink = (index: number) => {
+    if (productLinks.length <= 1) return;
+    setProductLinks(productLinks.filter((_, i) => i !== index));
   };
 
   const handleUpdateProductLink = (index: number, field: 'title' | 'url', value: string) => {
@@ -225,12 +248,12 @@ export const PageEditor: React.FC = () => {
     user_id: user?.id || 'guest',
     title: computedTitle,
     slug: slug || 'my-offer',
-    campaign_name: existingPage?.campaign_name || 'Main Campaign',
+    campaign_name: existingPage?.campaign_name || `${channelName || 'Main'} Campaign`,
     destination_type: 'landing_page',
     external_url: '',
     status: 'active',
-    headline: headline || 'Get My Free Resource Kit',
-    subheadline: subheadline || 'Drop your email below to unlock instant access to all video tools.',
+    headline: headline || 'The Six Figure Wealth Guide',
+    subheadline: subheadline || 'Drop your email below to get the free downloadable guide and resources.',
     product_links: productLinks.map(p => ({ ...p, url: normalizeUrl(p.url) })),
     lead_capture_enabled: leadCaptureEnabled,
     lead_capture_fields: {
@@ -260,9 +283,32 @@ export const PageEditor: React.FC = () => {
     updated_at: new Date().toISOString(),
   };
 
-  // STEP 1 -> STEP 2
+  // STEP 1 Validation & Proceed
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    if (!avatarUrl.trim()) {
+      setErrorMessage('Please upload a channel logo / avatar before proceeding.');
+      return;
+    }
+    if (!handle.trim()) {
+      setErrorMessage('Please enter your channel handle / username.');
+      return;
+    }
+    if (!channelName.trim()) {
+      setErrorMessage('Please enter your channel / brand name.');
+      return;
+    }
+    if (!channelBio.trim()) {
+      setErrorMessage('Please enter your channel bio / description.');
+      return;
+    }
+    if (!primaryColor.trim()) {
+      setErrorMessage('Please choose a primary theme color.');
+      return;
+    }
+
     if (activeChannel) {
       try {
         await updateChannel(activeChannel.id, {
@@ -271,21 +317,28 @@ export const PageEditor: React.FC = () => {
           avatar_url: avatarUrl,
           subscriber_count: subscriberCount.trim(),
           primary_color: primaryColor,
-          name: channelName.trim() || activeChannel.name,
+          name: channelName.trim(),
         });
       } catch (err) {
         console.warn('Channel update notice:', err);
       }
     }
+
     setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // STEP 2 -> STEP 3 (Save & Download 4K QR)
+  // STEP 2 Submit -> Trigger Paywall (if needed) or Proceed to Step 3
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
 
-    // If user is guest or not on Pro, show 14-day free trial modal with inline signup
+    if (!headline.trim()) {
+      setErrorMessage('Please enter a main headline for your mobile page.');
+      return;
+    }
+
+    // If guest, show the 2-step paywall modal (Account creation with prefilled name -> 14-day free trial)
     if (!user || !isPro) {
       setShowPaywallModal(true);
       return;
@@ -302,17 +355,17 @@ export const PageEditor: React.FC = () => {
       .filter(l => l.title.trim() || l.url.trim())
       .map(l => ({
         ...l,
-        title: l.title.trim(),
+        title: l.title.trim() || 'Product Resource',
         url: normalizeUrl(l.url)
       }));
 
     const payload: Partial<TapframePage> = {
       title: computedTitle,
       slug: slug.trim(),
-      campaign_name: existingPage?.campaign_name || `${channelName} Campaign`,
+      campaign_name: existingPage?.campaign_name || `${channelName || 'Main'} Campaign`,
       destination_type: 'landing_page',
       external_url: '',
-      headline: headline.trim() || 'Exclusive Video Offer',
+      headline: headline.trim(),
       subheadline: subheadline.trim(),
       product_links: cleanedLinks,
       lead_capture_enabled: leadCaptureEnabled,
@@ -321,8 +374,8 @@ export const PageEditor: React.FC = () => {
         collect_name: collectName,
         collect_phone: collectPhone,
       },
-      lead_magnet_title: leadMagnetTitle.trim(),
-      lead_capture_button_text: leadCaptureButtonText.trim(),
+      lead_magnet_title: leadMagnetTitle.trim() || 'Free Strategy Guide & Template',
+      lead_capture_button_text: leadCaptureButtonText.trim() || 'Get Access',
       custom_theme: previewPage.custom_theme,
     };
 
@@ -341,7 +394,6 @@ export const PageEditor: React.FC = () => {
         });
       } catch (e) {}
 
-      // Move to Step 3: Dedicated 4K Download & Export Screen!
       setCurrentStep(3);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
@@ -360,44 +412,44 @@ export const PageEditor: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-16 w-full max-w-6xl mx-auto px-2 sm:px-4">
-      {/* Top Breadcrumb & Step Indicator (Apple-Style Minimalist Stepper) */}
+      {/* Top Stepper Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <Link
             to={user ? "/dashboard" : "/"}
-            className="p-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs"
+            className="p-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
             title="Return"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <span className="text-[10px] uppercase font-bold tracking-widest text-violet-600 block">
-              Step {currentStep} of 3 • {currentStep === 1 ? 'Creator Identity' : currentStep === 2 ? 'Page Content' : 'Export & Download'}
+              Step {currentStep} of 3 • {currentStep === 1 ? 'Creator Profile & Visual Identity' : currentStep === 2 ? 'Page Content' : 'Export & Download'}
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              {currentStep === 1 && '1. Channel Identity & Branding'}
+              {currentStep === 1 && 'Creator Profile & Visual Identity'}
               {currentStep === 2 && '2. Mobile Page Content & Offer'}
               {currentStep === 3 && '3. Download 4K Video Tapframe'}
             </h1>
           </div>
         </div>
 
-        {/* Fluid Step Progress Dots */}
+        {/* Fluid Stepper Pills */}
         <div className="flex items-center gap-2">
           {[
-            { step: 1, label: 'Identity' },
-            { step: 2, label: 'Content' },
+            { step: 1, label: 'Creator Profile' },
+            { step: 2, label: 'Page Content' },
             { step: 3, label: 'Download' },
           ].map((s) => (
             <button
               key={s.step}
               type="button"
               onClick={() => {
-                if (s.step < currentStep || (s.step === 2 && currentStep === 1)) {
-                  setCurrentStep(s.step as any);
-                }
+                if (s.step === 1) setCurrentStep(1);
+                if (s.step === 2 && isStep1Valid) setCurrentStep(2);
+                if (s.step === 3 && isStep1Valid && headline.trim()) setCurrentStep(3);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 currentStep === s.step
                   ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
                   : currentStep > s.step
@@ -420,7 +472,7 @@ export const PageEditor: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* SCREEN 1: CREATOR IDENTITY & BRANDING SETUP                               */}
+      {/* SCREEN 1: CREATOR PROFILE & VISUAL IDENTITY (ALL REQUIRED EXCEPT OPTIONAL)*/}
       {/* ========================================================================= */}
       {currentStep === 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in-up">
@@ -431,14 +483,14 @@ export const PageEditor: React.FC = () => {
                   Creator Profile & Visual Identity
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Your handle, bio, and brand colors skin all QR landing pages automatically.
+                  Your handle, bio, and brand colors skin all QR landing pages automatically. Fill in all required fields to continue.
                 </p>
               </div>
 
-              {/* 1. Upload Logo */}
+              {/* 1. Upload Logo (Required) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">
-                  Upload Logo / Avatar
+                <label className="block text-xs font-bold text-slate-800 mb-2">
+                  Upload Logo / Avatar <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl apple-glass-subtle">
                   <div className="relative shrink-0">
@@ -449,7 +501,7 @@ export const PageEditor: React.FC = () => {
                         className="w-16 h-16 rounded-full object-cover ring-2 ring-violet-500 shadow-md"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600">
+                      <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
                         <ImageIcon className="w-7 h-7" />
                       </div>
                     )}
@@ -471,7 +523,7 @@ export const PageEditor: React.FC = () => {
                         className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                       >
                         <Upload className="w-3.5 h-3.5" />
-                        <span>Upload Logo</span>
+                        <span>{avatarUrl ? 'Change Logo' : 'Upload Logo *'}</span>
                       </button>
 
                       {avatarUrl && (
@@ -496,11 +548,11 @@ export const PageEditor: React.FC = () => {
                 </div>
               </div>
 
-              {/* 2. Handle / Username & Channel Name */}
+              {/* 2. Handle / Username (Required) & Channel Name (Required) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Handle / Username *
+                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                    Handle / Username <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -513,27 +565,28 @@ export const PageEditor: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Channel / Brand Name
+                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                    Channel / Brand Name <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={channelName}
                     onChange={(e) => setChannelName(e.target.value)}
-                    placeholder="e.g. Oluwaseun Tech & Media"
+                    placeholder="e.g. Oluwaseun Media"
                     className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                   />
                 </div>
               </div>
 
-              {/* 3. Channel Bio / Description */}
+              {/* 3. Channel Bio / Description (Required) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Channel Bio / Description
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                  Channel Bio / Description <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   rows={2}
+                  required
                   value={channelBio}
                   onChange={(e) => setChannelBio(e.target.value)}
                   placeholder="A short description of what you teach, produce, or offer to viewers..."
@@ -541,11 +594,14 @@ export const PageEditor: React.FC = () => {
                 />
               </div>
 
-              {/* 4. Subscriber Count / Proof (optional) */}
+              {/* 4. Subscriber Count / Proof (OPTIONAL ONLY) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Subscriber Count / Proof (Optional)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Subscriber Count / Proof
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">(Optional)</span>
+                </div>
                 <input
                   type="text"
                   value={subscriberCount}
@@ -555,10 +611,10 @@ export const PageEditor: React.FC = () => {
                 />
               </div>
 
-              {/* 5. Primary Theme Color */}
+              {/* 5. Primary Theme Color (Required) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">
-                  Primary Theme Color
+                <label className="block text-xs font-bold text-slate-800 mb-2">
+                  Primary Theme Color <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex items-center gap-3 flex-wrap">
                   {PRESET_COLORS.map((c) => (
@@ -585,15 +641,21 @@ export const PageEditor: React.FC = () => {
                 </div>
               </div>
 
-              {/* Save & Continue */}
+              {/* Save & Continue Button (Disabled if parameters are missing) */}
               <div className="pt-4 border-t border-slate-200">
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+                  disabled={!isStep1Valid}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
                 >
                   <span>Save & Continue to Page Content</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+                {!isStep1Valid && (
+                  <p className="text-[11px] text-amber-700 text-center mt-2 font-medium">
+                    ⚠️ Please fill in all required parameters (Logo, Handle, Name, Bio, Color) to continue.
+                  </p>
+                )}
               </div>
             </form>
           </div>
@@ -610,24 +672,32 @@ export const PageEditor: React.FC = () => {
                 />
               </div>
 
-              {/* Viewer Preview Mockup */}
+              {/* Live Card Mockup */}
               <div className="w-full max-w-[280px] rounded-[32px] bg-slate-950 text-white border-4 border-slate-800 p-4 text-center shadow-2xl">
                 <div className="flex items-center justify-center gap-2 pb-2 border-b border-white/10">
-                  <img
-                    src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                    alt="Channel"
-                    className="w-7 h-7 rounded-full object-cover ring-2 ring-violet-500"
-                  />
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Channel"
+                      className="w-7 h-7 rounded-full object-cover ring-2 ring-violet-500"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px]">
+                      Logo
+                    </div>
+                  )}
                   <div className="text-left">
-                    <div className="text-xs font-bold text-white">{channelName}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{handle} {subscriberCount ? `• ${subscriberCount}` : ''}</div>
+                    <div className="text-xs font-bold text-white">{channelName || 'Your Brand Name'}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {handle || '@handle'} {subscriberCount ? `• ${subscriberCount}` : ''}
+                    </div>
                   </div>
                 </div>
 
                 <div className="py-4 space-y-2">
                   <div className="h-4 w-3/4 bg-white/20 rounded-md mx-auto" />
                   <div className="h-3 w-5/6 bg-white/10 rounded-md mx-auto" />
-                  <div className="h-9 w-full rounded-xl bg-violet-600/80 mt-3" />
+                  <div className="h-9 w-full rounded-xl mt-3" style={{ backgroundColor: primaryColor || '#8B5CF6' }} />
                 </div>
               </div>
             </div>
@@ -636,7 +706,7 @@ export const PageEditor: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* SCREEN 2: MOBILE PAGE CONTENT & PRODUCT DESTINATION LINK SETUP            */}
+      {/* SCREEN 2: MOBILE PAGE CONTENT & UNLIMITED PRODUCT LINKS                   */}
       {/* ========================================================================= */}
       {currentStep === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in-up">
@@ -644,17 +714,19 @@ export const PageEditor: React.FC = () => {
             <form onSubmit={handleStep2Submit} className="p-6 sm:p-8 rounded-3xl apple-glass space-y-6">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                  1. Mobile Page Content
+                  2. Mobile Page Content & Offer
                 </h2>
                 <p className="text-xs text-slate-500">
-                  What viewers see immediately upon scanning your video QR code.
+                  Enter your headline, subheadline, and product links for viewers scanning your QR code.
                 </p>
               </div>
 
-              {/* Main Headline * (Max 100 words) */}
+              {/* Main Headline * (Clean Empty Input with Light Placeholder) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-700">Main Headline *</label>
+                  <label className="text-xs font-bold text-slate-800">
+                    Main Headline <span className="text-rose-500">*</span>
+                  </label>
                   <span className="text-[10px] text-slate-400 font-mono">{headlineWords}/{MAX_WORDS} words</span>
                 </div>
                 <input
@@ -663,11 +735,11 @@ export const PageEditor: React.FC = () => {
                   value={headline}
                   onChange={(e) => handleHeadlineChange(e.target.value)}
                   placeholder="e.g. The Six Figure Wealth Guide"
-                  className="w-full px-3.5 py-3 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm font-semibold placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
+                  className="w-full px-3.5 py-3 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                 />
               </div>
 
-              {/* Subheadline / Description (Max 100 words) */}
+              {/* Subheadline / Description (Clean Empty Input with Light Placeholder) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-700">Subheadline / Description</label>
@@ -678,28 +750,51 @@ export const PageEditor: React.FC = () => {
                   value={subheadline}
                   onChange={(e) => handleSubheadlineChange(e.target.value)}
                   placeholder="e.g. Drop your email below to get the free downloadable guide and resources."
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                 />
               </div>
 
-              {/* Product Destination Link */}
+              {/* Product Destination Links (Supports Multiple / Unlimited Links) */}
               <div className="p-5 rounded-2xl apple-glass-subtle space-y-3">
-                <div>
-                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <Link2 className="w-3.5 h-3.5 text-violet-600" />
-                    <span>Product Destination Link</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-violet-600" />
+                      <span>Product Destination Link</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Destination URL where viewers are redirected after entering their details.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Destination URL where viewers are redirected after entering their details.
-                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleAddProductLink}
+                    className="px-3 py-1.5 rounded-xl bg-violet-100 hover:bg-violet-200 text-violet-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Link</span>
+                  </button>
                 </div>
 
                 <div className="space-y-3 pt-1">
                   {productLinks.map((link, idx) => (
-                    <div key={link.id || idx} className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-xs">
-                      <span className="text-[11px] font-bold text-violet-700">
-                        Primary Destination Link #1
-                      </span>
+                    <div key={link.id || idx} className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-xs relative">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-violet-700">
+                          {idx === 0 ? 'Primary Destination Link #1' : `Product Link #${idx + 1}`}
+                        </span>
+                        {productLinks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProductLink(idx)}
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                            title="Remove link"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
 
                       <div>
                         <input
@@ -707,7 +802,7 @@ export const PageEditor: React.FC = () => {
                           value={link.title}
                           onChange={(e) => handleUpdateProductLink(idx, 'title', e.target.value)}
                           placeholder="Name of the product (e.g. Notion Business Template)"
-                          className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500"
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-violet-500"
                         />
                       </div>
 
@@ -719,7 +814,7 @@ export const PageEditor: React.FC = () => {
                             value={link.url}
                             onChange={(e) => handleUpdateProductLink(idx, 'url', e.target.value)}
                             placeholder="e.g. https://creator.gumroad.com or www.myproduct.com"
-                            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-violet-500"
+                            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-violet-500"
                           />
                         </div>
                       </div>
@@ -790,7 +885,7 @@ export const PageEditor: React.FC = () => {
                         value={leadMagnetTitle}
                         onChange={(e) => setLeadMagnetTitle(e.target.value)}
                         placeholder="e.g. Free Strategy Guide & Template"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none focus:border-violet-500"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-violet-500"
                       />
                     </div>
 
@@ -801,7 +896,7 @@ export const PageEditor: React.FC = () => {
                         value={leadCaptureButtonText}
                         onChange={(e) => setLeadCaptureButtonText(e.target.value)}
                         placeholder="e.g. Get Access"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none focus:border-violet-500"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-violet-500"
                       />
                     </div>
                   </div>
@@ -819,8 +914,8 @@ export const PageEditor: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+                  disabled={saving || !headline.trim()}
+                  className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-sm sm:text-base shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>{saving ? 'Publishing...' : 'Save & Download 4K QR Tapframe'}</span>
@@ -829,17 +924,17 @@ export const PageEditor: React.FC = () => {
             </form>
           </div>
 
-          {/* Side Preview */}
+          {/* Side Preview Mockup (Synchronized with collectName and collectPhone) */}
           <div className="lg:col-span-5 sticky top-20 space-y-4">
             <div className="p-6 rounded-3xl apple-glass flex flex-col items-center justify-center">
-              <div className="w-full max-w-[300px] rounded-[34px] bg-slate-950 text-white border-4 border-slate-800 shadow-2xl overflow-hidden p-4 text-center">
+              <div className="w-full max-w-[300px] rounded-[34px] bg-slate-950 text-white border-4 border-slate-800 shadow-2xl overflow-hidden p-4 text-center pointer-events-none">
                 <div className="flex items-center justify-center gap-2 pb-2 mb-3 border-b border-white/10">
                   <img
-                    src={avatarUrl}
+                    src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
                     alt="Channel"
                     className="w-6 h-6 rounded-full object-cover ring-1 ring-violet-500"
                   />
-                  <span className="text-xs font-bold text-white">{channelName}</span>
+                  <span className="text-xs font-bold text-white">{channelName || 'Your Channel'}</span>
                 </div>
 
                 <h3 className="text-sm font-bold text-white leading-tight mb-1.5">
@@ -851,12 +946,51 @@ export const PageEditor: React.FC = () => {
 
                 {leadCaptureEnabled ? (
                   <div className="p-3 rounded-2xl bg-white/5 border border-violet-500/30 space-y-2 text-left">
-                    <span className="text-[10px] font-bold text-violet-300">{leadMagnetTitle}</span>
-                    <input type="email" disabled placeholder="your@email.com" className="w-full px-2 py-1.5 rounded-lg bg-black/40 text-[10px] text-slate-400 border border-white/10" />
-                    <button type="button" disabled className="w-full py-2 rounded-xl bg-violet-600 text-white font-bold text-xs">{leadCaptureButtonText}</button>
+                    <span className="text-[10px] font-bold text-violet-300 block">
+                      {leadMagnetTitle || 'Free Strategy Guide & Template'}
+                    </span>
+
+                    {/* LIVE FULL NAME INPUT IN MOCKUP IF CHECKED */}
+                    {collectName && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/40 text-[10px] text-slate-300 border border-violet-400/40 animate-fade-in">
+                        <User className="w-3 h-3 text-violet-400 shrink-0" />
+                        <span>Full Name input</span>
+                      </div>
+                    )}
+
+                    {/* ALWAYS EMAIL */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/40 text-[10px] text-slate-300 border border-white/10">
+                      <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>your@email.com</span>
+                    </div>
+
+                    {/* LIVE PHONE NUMBER INPUT IN MOCKUP IF CHECKED */}
+                    {collectPhone && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/40 text-[10px] text-slate-300 border border-violet-400/40 animate-fade-in">
+                        <Phone className="w-3 h-3 text-violet-400 shrink-0" />
+                        <span>Phone / WhatsApp input</span>
+                      </div>
+                    )}
+
+                    <button 
+                      type="button" 
+                      disabled 
+                      className="w-full py-2 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-1 shadow-md"
+                      style={{ backgroundColor: primaryColor || '#8B5CF6' }}
+                    >
+                      <span>{leadCaptureButtonText || 'Get Access'}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
                   </div>
                 ) : (
-                  <div className="p-2.5 rounded-xl bg-white/10 text-xs font-semibold">{productLinks[0]?.title || 'Open Resource'}</div>
+                  <div className="space-y-1.5">
+                    {productLinks.map((p, i) => (
+                      <div key={i} className="p-2.5 rounded-xl bg-white/10 text-xs font-semibold flex items-center justify-between">
+                        <span>{p.title || `Product Link #${i+1}`}</span>
+                        <ExternalLink className="w-3 h-3 text-violet-400" />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -890,7 +1024,7 @@ export const PageEditor: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-widest text-violet-600">4K Video Overlay</span>
-                    <h3 className="text-base font-bold text-slate-900">{headline}</h3>
+                    <h3 className="text-base font-bold text-slate-900">{headline || 'My Offer'}</h3>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 font-mono text-xs font-bold">
                     1080x1080 PNG
@@ -972,7 +1106,7 @@ export const PageEditor: React.FC = () => {
                     <>
                       <p>1. Drag the downloaded <strong>.PNG</strong> file directly into your Premiere Pro project timeline.</p>
                       <p>2. Place it on Video Track 2 or 3 over your main footage.</p>
-                      <p>3. Position it in the bottom-right or top-right corner for <strong>5–10 seconds</strong> right as you mention your resource.</p>
+                      <p>3. Position it in the corner of your video for <strong>5–10 seconds</strong> right as you mention your offer.</p>
                     </>
                   )}
                   {editorGuideTab === 'finalcut' && (
@@ -1022,10 +1156,11 @@ export const PageEditor: React.FC = () => {
         </div>
       )}
 
-      {/* Upgrade / 14-Day Free Trial Paywall Modal */}
+      {/* Upgrade / 14-Day Free Trial Paywall Modal (2-Step Registration & Animated Pricing) */}
       <UpgradePaywallModal
         isOpen={showPaywallModal}
         onClose={() => setShowPaywallModal(false)}
+        initialName={channelName}
         featureTitle="Download Your 4K Video QR Code"
         featureDescription="Start your 14-day free trial ($0 today) to download crisp 4K QR frames, dynamic redirect links, and lead capture tools."
         onSuccessDownload={async () => {

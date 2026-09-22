@@ -570,7 +570,7 @@ export const AuthPage: React.FC = () => {
         )}
 
         <p className="mt-6 text-center text-[10px] text-slate-400">
-          Clearpath Media Technologies, Inc. • support@clearpathqr.com
+          Clearpath Media Technologies, Inc. • info@clearpath.click
         </p>
       </div>
     </div>
