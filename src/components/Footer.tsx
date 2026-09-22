@@ -5,7 +5,7 @@ import { ShieldCheck, Mail, MapPin, Lock, Heart } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="w-full bg-white border-t border-slate-200 mt-16 text-slate-600 text-xs py-12 px-4 sm:px-6 lg:px-8">
+    <footer className="w-full bg-white/80 backdrop-blur-md border-t border-slate-200 mt-16 text-slate-600 text-xs py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-slate-200">
         {/* Company Identity */}
         <div className="space-y-3 md:col-span-1">
@@ -20,8 +20,8 @@ export const Footer: React.FC = () => {
             </div>
             <div className="flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <a href="mailto:support@clearpathqr.com" className="hover:text-violet-600 transition-colors">
-                support@clearpathqr.com
+              <a href="mailto:info@clearpath.click" className="hover:text-violet-600 transition-colors font-medium">
+                info@clearpath.click
               </a>
             </div>
           </div>
@@ -32,7 +32,7 @@ export const Footer: React.FC = () => {
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Product</h4>
           <ul className="space-y-2 text-xs">
             <li>
-              <Link to="/dashboard/new" className="hover:text-violet-600 transition-colors">
+              <Link to="/create" className="hover:text-violet-600 transition-colors">
                 Create Free QR Tapframe
               </Link>
             </li>
@@ -89,7 +89,7 @@ export const Footer: React.FC = () => {
         {/* Compliance Guarantees */}
         <div className="space-y-3">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Trust & Safety</h4>
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-[11px] text-slate-600">
+          <div className="p-3.5 rounded-2xl apple-glass-subtle space-y-2 text-[11px] text-slate-600">
             <div className="flex items-center gap-1.5 font-bold text-slate-900">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>14-Day Free Trial Guarantee</span>

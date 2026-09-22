@@ -8,7 +8,7 @@ export const RefundPolicyPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between">
       {/* Top Navigation */}
-      <header className="w-full bg-white border-b border-slate-200 py-4 px-4 sm:px-8 sticky top-0 z-30 shadow-xs">
+      <header className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 py-4 px-4 sm:px-8 sticky top-0 z-30 shadow-xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Logo to="/" size="md" theme="light" />
           <Link
@@ -32,11 +32,11 @@ export const RefundPolicyPage: React.FC = () => {
             14-Day Refund Policy
           </h1>
           <p className="text-xs text-slate-500 font-mono">
-            Last Updated: September 21, 2026 • Transparent & Honest Returns
+            Last Updated: September 22, 2026 • Transparent & Honest Returns
           </p>
         </div>
 
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-6 text-xs sm:text-sm text-slate-700 leading-relaxed">
+        <div className="p-6 rounded-3xl apple-glass shadow-xs space-y-6 text-xs sm:text-sm text-slate-700 leading-relaxed">
           {/* Section 1 */}
           <section className="space-y-2">
             <h2 className="text-base font-bold text-slate-900">1. Our 14-Day Money-Back Guarantee</h2>
@@ -52,7 +52,7 @@ export const RefundPolicyPage: React.FC = () => {
               We do not impose retention phone calls or complicated forms. To request a refund:
             </p>
             <ol className="list-decimal pl-5 space-y-1.5">
-              <li>Send an email to <a href="mailto:support@clearpathqr.com" className="text-violet-600 underline font-semibold">support@clearpathqr.com</a> with the subject line <code>"Refund Request"</code>.</li>
+              <li>Send an email to <a href="mailto:info@clearpath.click" className="text-violet-600 underline font-semibold">info@clearpath.click</a> with the subject line <code>"Refund Request"</code>.</li>
               <li>Include your account email address.</li>
               <li>Our support team will process your refund within <strong>24 to 48 hours</strong>.</li>
             </ol>

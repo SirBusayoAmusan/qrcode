@@ -8,7 +8,7 @@ export const PrivacyPolicyPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between">
       {/* Top Navigation */}
-      <header className="w-full bg-white border-b border-slate-200 py-4 px-4 sm:px-8 sticky top-0 z-30 shadow-xs">
+      <header className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 py-4 px-4 sm:px-8 sticky top-0 z-30 shadow-xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Logo to="/" size="md" theme="light" />
           <Link
@@ -32,21 +32,21 @@ export const PrivacyPolicyPage: React.FC = () => {
             Privacy Policy
           </h1>
           <p className="text-xs text-slate-500 font-mono">
-            Last Updated: September 21, 2026 • Effective Date: September 21, 2026
+            Last Updated: September 22, 2026 • Effective Date: September 22, 2026
           </p>
         </div>
 
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-6 text-xs sm:text-sm text-slate-700 leading-relaxed">
+        <div className="p-6 rounded-3xl apple-glass shadow-xs space-y-6 text-xs sm:text-sm text-slate-700 leading-relaxed">
           {/* Section 1 */}
           <section className="space-y-2">
             <h2 className="text-base font-bold text-slate-900">1. Data Controller Information</h2>
             <p>
               Clearpath Media Technologies, Inc. (“ClearpathQR”, “we”, “our”, or “us”) provides on-screen QR code generation and mobile landing page software for digital creators. If you have questions regarding data privacy or wish to exercise your rights, you can contact our designated Data Protection Officer at:
             </p>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+            <div className="p-3.5 rounded-2xl apple-glass-subtle text-xs space-y-1">
               <div><strong>Entity:</strong> Clearpath Media Technologies, Inc.</div>
               <div><strong>Address:</strong> 100 Montgomery St, Suite 1400, San Francisco, CA 94104, USA</div>
-              <div><strong>Privacy Email:</strong> <a href="mailto:privacy@clearpathqr.com" className="text-violet-600 underline">privacy@clearpathqr.com</a></div>
+              <div><strong>Privacy Email:</strong> <a href="mailto:info@clearpath.click" className="text-violet-600 underline font-semibold">info@clearpath.click</a></div>
             </div>
           </section>
 
